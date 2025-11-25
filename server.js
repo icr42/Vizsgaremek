@@ -512,13 +512,8 @@ app.post("/api/cart/remove", requireLogin, (req, res) => {
 app.post("/api/checkout", requireLogin, (req, res) => {
   const userId = req.session.user.id;
 
-  const {
-    shippingName,
-    shippingPhone,
-    shippingAddress,
-    paymentMethod,
-    note,
-  } = req.body || {};
+  const { shippingName, shippingPhone, shippingAddress, paymentMethod, note } =
+    req.body || {};
 
   // 1) Szállítási adatok ellenőrzése
   if (!shippingName || !shippingPhone || !shippingAddress) {
@@ -647,7 +642,6 @@ app.post("/api/checkout", requireLogin, (req, res) => {
   });
 });
 
-
 // 🔹 Rendelések lekérdezése a bejelentkezett felhasználónak
 app.get("/api/orders", requireLogin, (req, res) => {
   const userId = req.session.user.id;
@@ -741,10 +735,9 @@ app.get("/api/admin/products", requireAdmin, (req, res) => {
   });
 });
 
-
 // 🔹 Admin – új termék létrehozása
 app.post("/api/admin/products", requireAdmin, (req, res) => {
-  const { name, description, price, is_active, category, } = req.body;
+  const { name, description, price, is_active, category } = req.body;
 
   if (!name || !price) {
     return res.status(400).json({
@@ -755,9 +748,9 @@ app.post("/api/admin/products", requireAdmin, (req, res) => {
 
   const safeCategory =
     category === "burger" ||
-      category === "side" ||
-      category === "drink" ||
-      category === "sauce"
+    category === "side" ||
+    category === "drink" ||
+    category === "sauce"
       ? category
       : "burger";
 
@@ -786,7 +779,6 @@ app.post("/api/admin/products", requireAdmin, (req, res) => {
   );
 });
 
-
 // 🔹 Admin – termék módosítása
 app.put("/api/admin/products/:id", requireAdmin, (req, res) => {
   const productId = req.params.id;
@@ -802,9 +794,9 @@ app.put("/api/admin/products/:id", requireAdmin, (req, res) => {
   // kategória normalizálás (ha hülyeség jön, legyen burger)
   const safeCategory =
     category === "burger" ||
-      category === "side" ||
-      category === "drink" ||
-      category === "sauce"
+    category === "side" ||
+    category === "drink" ||
+    category === "sauce"
       ? category
       : "burger";
 
@@ -865,7 +857,6 @@ app.put("/api/admin/products/:id", requireAdmin, (req, res) => {
   );
 });
 
-
 // 🔹 Admin – termék inaktiválása
 app.delete("/api/admin/products/:id", requireAdmin, (req, res) => {
   const productId = req.params.id;
@@ -916,7 +907,6 @@ app.put("/api/admin/products/:id/activate", requireAdmin, (req, res) => {
     });
   });
 });
-
 
 // 🔹 Admin – rendelések listázása
 app.get("/api/admin/orders", requireAdmin, (req, res) => {
@@ -1060,6 +1050,80 @@ app.put("/api/admin/orders/:id/status", requireAdmin, (req, res) => {
   });
 });
 
+// 🔹 Admin – asztalfoglalások listázása
+app.get("/api/admin/reservations", requireAdmin, (req, res) => {
+  const sql = `
+    SELECT
+      id,
+      table_number,
+      reservation_date,
+      reservation_time,
+      name,
+      phone,
+      people_count,
+      note,
+      status,
+      created_at
+    FROM reservations
+    ORDER BY reservation_date DESC, reservation_time DESC, id DESC
+  `;
+
+  db.query(sql, (err, rows) => {
+    if (err) {
+      console.error("DB hiba (admin reservations select):", err);
+      return res.status(500).json({
+        success: false,
+        message: "Szerver hiba a foglalások lekérdezésekor.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      reservations: rows,
+    });
+  });
+});
+
+// 🔹 Admin – foglalás státuszának módosítása
+app.put("/api/admin/reservations/:id/status", requireAdmin, (req, res) => {
+  const reservationId = req.params.id;
+  const { status } = req.body || {};
+
+  const allowedStatuses = ["pending", "confirmed", "cancelled"];
+
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: "Érvénytelen státusz.",
+      details: status,
+    });
+  }
+
+  const sql = "UPDATE reservations SET status = ? WHERE id = ?";
+
+  db.query(sql, [status, reservationId], (err, result) => {
+    if (err) {
+      console.error("DB hiba (admin update reservation status):", err);
+      return res.status(500).json({
+        success: false,
+        message: "Szerver hiba a foglalás státusz módosításakor.",
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "A foglalás nem található.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Foglalás státusza frissítve.",
+    });
+  });
+});
+
 // 🔹 Publikus – termékek listázása a menühöz
 app.get("/api/products", (req, res) => {
   const sql = `
@@ -1110,6 +1174,186 @@ app.get("/api/menu", (req, res) => {
   });
 });
 
+// 🔹 Asztalfoglalás létrehozása (vendég is foglalhat)
+app.post("/api/reservations", (req, res) => {
+  const {
+    tableNumber,
+    date, // "YYYY-MM-DD"
+    time, // "HH:MM"
+    name,
+    phone,
+    peopleCount,
+    note,
+  } = req.body || {};
+
+  // 1) Alap ellenőrzés – kötelező mezők
+  if (!tableNumber || !date || !time || !name || !phone || !peopleCount) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Minden mező kitöltése kötelező (asztal, dátum, idő, név, telefon, létszám).",
+    });
+  }
+
+  const tableNum = Number(tableNumber);
+  const ppl = Number(peopleCount);
+
+  if (!Number.isInteger(tableNum) || tableNum < 1 || tableNum > 6) {
+    return res.status(400).json({
+      success: false,
+      message: "Érvénytelen asztalszám. 1 és 6 között választható.",
+    });
+  }
+
+  if (!Number.isInteger(ppl) || ppl <= 0 || ppl > 12) {
+    return res.status(400).json({
+      success: false,
+      message: "Érvénytelen létszám. 1 és 12 fő között foglalhatsz.",
+    });
+  }
+
+  // 2) Formátum ellenőrzés (regex)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
+  const timeRegex = /^\d{2}:\d{2}$/; // HH:MM
+
+  if (!dateRegex.test(date)) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Érvénytelen dátum formátum. Használd: ÉÉÉÉ-HH-NN (pl. 2025-11-21).",
+    });
+  }
+
+  if (!timeRegex.test(time)) {
+    return res.status(400).json({
+      success: false,
+      message: "Érvénytelen időpont formátum. Használd: ÓÓ:PP (pl. 18:30).",
+    });
+  }
+
+  // 3) Valódi dátum/idő ellenőrzése (ne legyen pl. 2025-13-40)
+  const [yearStr, monthStr, dayStr] = date.split("-");
+  const [hourStr, minuteStr] = time.split(":");
+
+  const year = Number(yearStr);
+  const month = Number(monthStr); // 1-12
+  const day = Number(dayStr);
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+
+  const dt = new Date(year, month - 1, day, hour, minute, 0, 0);
+
+  const isValidDate =
+    dt.getFullYear() === year &&
+    dt.getMonth() === month - 1 &&
+    dt.getDate() === day &&
+    dt.getHours() === hour &&
+    dt.getMinutes() === minute;
+
+  if (!isValidDate || isNaN(dt.getTime())) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Érvénytelen dátum vagy időpont. Kérlek ellenőrizd a megadott értékeket.",
+    });
+  }
+
+  // Múltbeli napra ne lehessen foglalni
+  const now = new Date();
+
+  // "Ma" 00:00-ra állítva (csak a nap számít, nem az időpont)
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // A foglalás napja, idő nélkül
+  const reservationDay = new Date(year, month - 1, day);
+
+  if (reservationDay < today) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Már elmúlt napra nem tudsz foglalni. Kérlek válassz egy későbbi dátumot.",
+    });
+  }
+
+  // ⛔ Mai napra: ne lehessen már elmúlt időpontra foglalni
+  const isToday =
+    reservationDay.getFullYear() === today.getFullYear() &&
+    reservationDay.getMonth() === today.getMonth() &&
+    reservationDay.getDate() === today.getDate();
+
+  if (isToday) {
+    // dt = a foglalás teljes dátuma + időpontja
+    if (dt.getTime() < now.getTime()) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Erre az időpontra már nem tudsz foglalni. Válassz későbbit a mai napon.",
+      });
+    }
+  }
+
+  const mysqlTime = `${time}:00`; // "HH:MM:SS"
+
+  // 4) Ütközésvizsgálat: van-e már foglalás erre az asztalra, erre az időpontra?
+  const conflictSql = `
+    SELECT id 
+    FROM reservations
+    WHERE table_number = ?
+      AND reservation_date = ?
+      AND reservation_time = ?
+      AND status IN ('pending', 'confirmed')
+    LIMIT 1
+  `;
+
+  db.query(
+    conflictSql,
+    [tableNum, date, mysqlTime],
+    (conflictErr, conflictRows) => {
+      if (conflictErr) {
+        console.error("DB hiba (reservation conflict check):", conflictErr);
+        return res.status(500).json({
+          success: false,
+          message: "Szerver hiba a foglalás ellenőrzésekor.",
+        });
+      }
+
+      if (conflictRows.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Erre az időpontra ez az asztal már foglalt. Kérlek válassz másik időpontot vagy asztalt.",
+        });
+      }
+
+      // 5) Ha nincs ütközés → mentjük a foglalást
+      const insertSql = `
+        INSERT INTO reservations
+          (table_number, reservation_date, reservation_time, name, phone, people_count, note, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+      `;
+
+      db.query(
+        insertSql,
+        [tableNum, date, mysqlTime, name, phone, ppl, note || null],
+        (err2, result) => {
+          if (err2) {
+            console.error("DB hiba (reservation insert):", err2);
+            return res.status(500).json({
+              success: false,
+              message: "Szerver hiba a foglalás mentésekor.",
+            });
+          }
+
+          return res.json({
+            success: true,
+            message:
+              "Foglalásod rögzítettük, hamarosan visszaigazoljuk. Köszönjük!",
+            reservationId: result.insertId,
+          });
+        }
+      );
+    }
+  );
+});
 
 // 🔹 Kilépés
 app.post("/api/logout", (req, res) => {
