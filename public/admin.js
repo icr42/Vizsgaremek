@@ -511,12 +511,72 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Szétválogatjuk státusz szerint
       const pending = reservations.filter((r) => r.status === "pending");
       const confirmed = reservations.filter((r) => r.status === "confirmed");
       const cancelled = reservations.filter((r) => r.status === "cancelled");
 
       reservationsAdminList.innerHTML = "";
+
+      function formatDateAndTimeRange(r) {
+        let datePart = "";
+        let timeFrom = "";
+        let timeTo = "";
+
+        // Dátum normalizálás (lehet string "YYYY-MM-DD" vagy Date)
+        if (typeof r.reservation_date === "string") {
+          datePart = r.reservation_date.split("T")[0]; // "YYYY-MM-DD"
+        } else if (r.reservation_date instanceof Date) {
+          datePart = r.reservation_date.toISOString().split("T")[0];
+        }
+
+        // Kezdő idő (reservation_time)
+        if (typeof r.reservation_time === "string") {
+          timeFrom = r.reservation_time.slice(0, 5); // "HH:MM"
+        } else if (r.reservation_time instanceof Date) {
+          timeFrom = r.reservation_time.toTimeString().slice(0, 5);
+        }
+
+        // Vég idő (end_time) – ha nincs, fallback: +2 óra
+        if (r.end_time) {
+          if (typeof r.end_time === "string") {
+            timeTo = r.end_time.slice(0, 5);
+          } else if (r.end_time instanceof Date) {
+            timeTo = r.end_time.toTimeString().slice(0, 5);
+          }
+        } else {
+          // régi foglalás – számoljunk +2 órát
+          const tmpStart = new Date(`${datePart}T${timeFrom}:00`);
+          if (!isNaN(tmpStart.getTime())) {
+            const tmpEndMs = tmpStart.getTime() + 120 * 60 * 1000;
+            const tmpEnd = new Date(tmpEndMs);
+            timeTo = tmpEnd.toTimeString().slice(0, 5);
+          }
+        }
+
+        let dateLabel = "";
+        try {
+          const d = new Date(`${datePart}T00:00:00`);
+          if (!isNaN(d.getTime())) {
+            dateLabel = d.toLocaleDateString("hu-HU", {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+            });
+          } else {
+            dateLabel = datePart;
+          }
+        } catch (e) {
+          dateLabel = datePart;
+        }
+
+        const timeRange =
+          timeFrom && timeTo ? `${timeFrom}–${timeTo}` : timeFrom || "";
+
+        return {
+          dateLabel,
+          timeRange,
+        };
+      }
 
       function renderSection(title, list, emptyText) {
         const section = document.createElement("div");
@@ -538,46 +598,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const wrapper = document.createElement("div");
             wrapper.className = "border rounded p-2 mb-2";
 
-            // Dátum/idő biztonságos formázása
-            let formattedDate = "";
-            try {
-              let datePart = "";
-              let timePart = "";
-
-              // reservation_date: lehet "2025-11-21" vagy "2025-11-21T00:00:00.000Z"
-              if (typeof r.reservation_date === "string") {
-                datePart = r.reservation_date.split("T")[0];
-              } else if (r.reservation_date instanceof Date) {
-                datePart = r.reservation_date.toISOString().split("T")[0];
-              }
-
-              // reservation_time: általában "HH:MM:SS"
-              if (typeof r.reservation_time === "string") {
-                timePart = r.reservation_time.slice(0, 5); // "HH:MM"
-              } else if (r.reservation_time instanceof Date) {
-                const t = r.reservation_time.toTimeString().slice(0, 5);
-                timePart = t;
-              }
-
-              const dateObj = new Date(`${datePart}T${timePart}:00`);
-
-              if (!isNaN(dateObj.getTime())) {
-                formattedDate = dateObj.toLocaleString("hu-HU", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                });
-              } else {
-                // fallback – legalább valami látszódjon
-                formattedDate = `${datePart} ${timePart}`;
-              }
-            } catch (e) {
-              formattedDate = "Ismeretlen dátum";
-            }
+            const { dateLabel, timeRange } = formatDateAndTimeRange(r);
 
             wrapper.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <div><strong>${formattedDate}</strong></div>
+                <div><strong>${dateLabel}${
+              timeRange ? " • " + timeRange : ""
+            }</strong></div>
                 <div>Asztal: <strong>${r.table_number}.</strong> • ${
               r.people_count
             } fő</div>
