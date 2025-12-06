@@ -15,22 +15,70 @@ document.addEventListener("DOMContentLoaded", () => {
   const editProductImageUrlInput = document.getElementById(
     "editProductImageUrl"
   );
-
   const editProductCategorySelect = document.getElementById(
     "editProductCategory"
   );
-
   const reservationsAdminList = document.getElementById(
     "reservationsAdminList"
   );
+  const newProductIsSpecialOfferInput = document.getElementById(
+    "newProductIsSpecialOffer"
+  );
+  const editProductIsSpecialOfferInput = document.getElementById(
+    "editProductIsSpecialOffer"
+  );
+
+  // Új termék kép feltöltés (drag & drop)
+  const newProductImageUrlInput = document.getElementById("newProductImageUrl");
+  const newImageDropZone = document.getElementById("newImageDropZone");
+  const newImageFileInput = document.getElementById("newImageFileInput");
+  const newImageBrowseTrigger = document.getElementById(
+    "newImageBrowseTrigger"
+  );
+  const newImageUploadStatus = document.getElementById("newImageUploadStatus");
+  const newImagePreview = document.getElementById("newImagePreview");
+
+  // Szerkesztés kép feltöltés (drag & drop)
+  const editImageDropZone = document.getElementById("editImageDropZone");
+  const editImageFileInput = document.getElementById("editImageFileInput");
+  const editImageBrowseTrigger = document.getElementById(
+    "editImageBrowseTrigger"
+  );
+  const editImageUploadStatus = document.getElementById(
+    "editImageUploadStatus"
+  );
+  const editImagePreview = document.getElementById("editImagePreview");
+
+  // Toast elemek
+  const toastEl = document.getElementById("adminToast");
+  const toastTextEl = document.getElementById("adminToastText");
+  let toastInstance;
+
+  if (toastEl && typeof bootstrap !== "undefined") {
+    toastInstance = new bootstrap.Toast(toastEl);
+  }
+
+  // Confirm modal elemek
+  const confirmModalEl = document.getElementById("confirmModal");
+  const confirmModalMessageEl = document.getElementById("confirmModalMessage");
+  const confirmModalConfirmBtn = document.getElementById(
+    "confirmModalConfirmBtn"
+  );
+  let confirmModal;
+  if (confirmModalEl && typeof bootstrap !== "undefined") {
+    confirmModal = new bootstrap.Modal(confirmModalEl);
+  }
 
   let editProductModal;
-  if (editProductModalEl) {
+  if (editProductModalEl && typeof bootstrap !== "undefined") {
     editProductModal = new bootstrap.Modal(editProductModalEl);
   }
+
   const orderDetailsModalEl = document.getElementById("orderDetailsModal");
   const orderDetailsTitle = document.getElementById("orderDetailsTitle");
   const orderDetailsBody = document.getElementById("orderDetailsBody");
+
+  const adminLogsList = document.getElementById("adminLogsList");
 
   let orderDetailsModal;
   if (orderDetailsModalEl && typeof bootstrap !== "undefined") {
@@ -49,34 +97,202 @@ document.addEventListener("DOMContentLoaded", () => {
     adminContent.classList.add("d-none");
   }
 
-  function hideError() {
-    if (!adminError) return;
-    adminError.textContent = "";
-    adminError.classList.add("d-none");
+  // Toast helper
+  function showToast(message, type = "success") {
+    if (!toastEl || !toastTextEl || typeof bootstrap === "undefined") {
+      console.log(`[${type}]`, message);
+      return;
+    }
+
+    toastTextEl.textContent = message;
+    toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+
+    if (!toastInstance) {
+      toastInstance = new bootstrap.Toast(toastEl);
+    }
+
+    toastInstance.show();
   }
+
+  // Confirm helper – Promise-t ad vissza (true/false)
+  function showConfirm(message) {
+    return new Promise((resolve) => {
+      if (
+        !confirmModal ||
+        !confirmModalMessageEl ||
+        !confirmModalConfirmBtn ||
+        typeof bootstrap === "undefined"
+      ) {
+        const result = window.confirm(message);
+        resolve(result);
+        return;
+      }
+
+      confirmModalMessageEl.textContent = message;
+
+      const handleConfirm = () => {
+        cleanup();
+        resolve(true);
+        confirmModal.hide();
+      };
+
+      const handleHidden = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      function cleanup() {
+        confirmModalConfirmBtn.removeEventListener("click", handleConfirm);
+        confirmModalEl.removeEventListener("hidden.bs.modal", handleHidden);
+      }
+
+      confirmModalConfirmBtn.addEventListener("click", handleConfirm, {
+        once: true,
+      });
+      confirmModalEl.addEventListener("hidden.bs.modal", handleHidden, {
+        once: true,
+      });
+
+      confirmModal.show();
+    });
+  }
+
+  function setupImageUpload({
+    dropZone,
+    fileInput,
+    browseTrigger,
+    statusEl,
+    previewImg,
+  }) {
+    if (!dropZone || !fileInput) {
+      return {
+        getSelectedFile: () => null,
+        clearSelectedFile: () => {},
+      };
+    }
+
+    let selectedFile = null;
+
+    const preventDefaults = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        () => dropZone.classList.add("bg-light"),
+        false
+      );
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(
+        eventName,
+        () => dropZone.classList.remove("bg-light"),
+        false
+      );
+    });
+
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    if (browseTrigger) {
+      browseTrigger.addEventListener("click", (e) => {
+        e.preventDefault();
+        fileInput.click();
+      });
+    }
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        handleSelectedFile(file);
+      }
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      const dt = e.dataTransfer;
+      const file = dt.files && dt.files[0];
+      if (file) {
+        handleSelectedFile(file);
+      }
+    });
+
+    function handleSelectedFile(file) {
+      if (!file.type.startsWith("image/")) {
+        selectedFile = null;
+        if (statusEl) statusEl.textContent = "Csak képfájlt tölthetsz fel.";
+        if (previewImg) {
+          previewImg.classList.add("d-none");
+          previewImg.src = "";
+        }
+        return;
+      }
+
+      selectedFile = file;
+      if (statusEl) statusEl.textContent = `Kiválasztott fájl: ${file.name}`;
+
+      if (previewImg) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          previewImg.src = ev.target.result;
+          previewImg.classList.remove("d-none");
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    return {
+      getSelectedFile() {
+        return selectedFile;
+      },
+      clearSelectedFile() {
+        selectedFile = null;
+        if (statusEl) statusEl.textContent = "";
+        if (previewImg) {
+          previewImg.classList.add("d-none");
+          previewImg.src = "";
+        }
+        fileInput.value = "";
+      },
+    };
+  }
+
+  const newImageUpload = setupImageUpload({
+    dropZone: newImageDropZone,
+    fileInput: newImageFileInput,
+    browseTrigger: newImageBrowseTrigger,
+    statusEl: newImageUploadStatus,
+    previewImg: newImagePreview,
+  });
+
+  const editImageUpload = setupImageUpload({
+    dropZone: editImageDropZone,
+    fileInput: editImageFileInput,
+    browseTrigger: editImageBrowseTrigger,
+    statusEl: editImageUploadStatus,
+    previewImg: editImagePreview,
+  });
 
   // 🔹 1. Auth + admin ellenőrzés
   async function checkAdmin() {
     try {
-      const res = await fetch("/api/me/admin");
+      const res = await apiFetch("/api/me/admin");
       const data = await res.json();
 
-      if (!data.loggedIn) {
-        showError("Ehhez az oldalhoz be kell jelentkezned admin fiókkal.");
-        return;
-      }
-
-      if (!data.user || !data.user.isAdmin) {
-        showError("Nincs jogosultságod az admin felület megtekintéséhez.");
-        return;
-      }
-
-      // Ha idáig eljutunk → admin
-      hideError();
       if (adminContent) adminContent.classList.remove("d-none");
 
       // Betöltjük a termékeket + rendeléseket
-      await Promise.all([loadProducts(), loadOrders(), loadReservations()]);
+      await Promise.all([
+        loadProducts(),
+        loadOrders(),
+        loadReservations(),
+        loadAdminLogs(),
+      ]);
     } catch (err) {
       console.error("Hiba az /api/me ellenőrzésnél:", err);
       showError("Nem sikerült csatlakozni a szerverhez.");
@@ -89,7 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
     productsList.textContent = "Termékek betöltése...";
 
     try {
-      const res = await fetch("/api/admin/products");
+      const res = await apiFetch("/api/admin/products");
       const data = await res.json();
 
       if (!data.success) {
@@ -108,6 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
       productsList.innerHTML = "";
       products.forEach((p) => {
         const isActive = Number(p.is_active) === 1;
+        const isSpecialOffer = Number(p.is_special_offer) === 1;
 
         const wrapper = document.createElement("div");
         wrapper.className =
@@ -121,6 +338,11 @@ document.addEventListener("DOMContentLoaded", () => {
           ${
             !isActive
               ? '<div class="badge bg-secondary mt-1">Inaktív</div>'
+              : ""
+          }
+          ${
+            isSpecialOffer
+              ? '<div class="badge bg-warning text-dark mt-1">Hétvégi ajánlat</div>'
               : ""
           }
         </div>
@@ -137,6 +359,10 @@ document.addEventListener("DOMContentLoaded", () => {
               p.image_url ? String(p.image_url).replace(/"/g, "&quot;") : ""
             }"
             data-category="${p.category || "burger"}"
+            data-is-special-offer="${
+              Number(p.is_special_offer) === 1 ? "1" : "0"
+            }"
+
             title="Szerkesztés"
           >
             <i class="bi bi-pencil"></i>
@@ -182,16 +408,37 @@ document.addEventListener("DOMContentLoaded", () => {
       const name = formData.get("name");
       const description = formData.get("description");
       const price = formData.get("price");
-      const image_url = formData.get("image_url");
+      let image_url = formData.get("image_url");
       const category = formData.get("category") || "burger";
+      const is_special_offer = formData.get("is_special_offer") === "on";
+
+      // Ha van feltöltött kép, először azt küldjük fel Multerrel
+      const newFile = newImageUpload.getSelectedFile
+        ? newImageUpload.getSelectedFile()
+        : null;
+
+      if (newFile) {
+        const uploadedUrl = await uploadImageFile(
+          newFile,
+          newImageUploadStatus
+        );
+        if (!uploadedUrl) {
+          // hibáról már szóltunk toastban, ne menjünk tovább
+          return;
+        }
+        image_url = uploadedUrl;
+        if (newProductImageUrlInput) {
+          newProductImageUrlInput.value = image_url;
+        }
+      }
 
       if (!name || !price) {
-        alert("A név és az ár megadása kötelező.");
+        showToast("A név és az ár megadása kötelező.", "warning");
         return;
       }
 
       try {
-        const res = await fetch("/api/admin/products", {
+        const res = await apiFetch("/api/admin/products", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -202,21 +449,28 @@ document.addEventListener("DOMContentLoaded", () => {
             price: Number(price),
             image_url,
             category,
+            is_special_offer,
           }),
         });
 
         const data = await res.json();
 
         if (data.success) {
-          alert("Termék sikeresen hozzáadva.");
+          showToast("Termék sikeresen hozzáadva.", "success");
           newProductForm.reset();
           await loadProducts();
+          if (newImageUpload && newImageUpload.clearSelectedFile) {
+            newImageUpload.clearSelectedFile();
+          }
         } else {
-          alert(data.message || "Nem sikerült létrehozni a terméket.");
+          showToast(
+            data.message || "Nem sikerült létrehozni a terméket.",
+            "danger"
+          );
         }
       } catch (err) {
         console.error("Hiba a termék hozzáadásánál:", err);
-        alert("Nem sikerült csatlakozni a szerverhez.");
+        showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
       }
     });
   }
@@ -233,23 +487,27 @@ document.addEventListener("DOMContentLoaded", () => {
         const productId = deleteBtn.dataset.productId;
         if (!productId) return;
 
-        if (!confirm("Biztosan inaktiválod ezt a terméket?")) return;
+        const ok = await showConfirm("Biztosan inaktiválod ezt a terméket?");
+        if (!ok) return;
 
         try {
-          const res = await fetch(`/api/admin/products/${productId}`, {
+          const res = await apiFetch(`/api/admin/products/${productId}`, {
             method: "DELETE",
           });
           const data = await res.json();
 
           if (data.success) {
-            alert("Termék inaktiválva.");
+            showToast("Termék inaktiválva.", "success");
             await loadProducts();
           } else {
-            alert(data.message || "Nem sikerült inaktiválni a terméket.");
+            showToast(
+              data.message || "Nem sikerült inaktiválni a terméket.",
+              "danger"
+            );
           }
         } catch (err) {
           console.error("Hiba a termék törlésekor:", err);
-          alert("Nem sikerült csatlakozni a szerverhez.");
+          showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
         }
 
         return;
@@ -260,21 +518,30 @@ document.addEventListener("DOMContentLoaded", () => {
         const productId = activateBtn.dataset.productId;
         if (!productId) return;
 
+        const ok = await showConfirm("Biztosan újraaktiválod ezt a terméket?");
+        if (!ok) return;
+
         try {
-          const res = await fetch(`/api/admin/products/${productId}/activate`, {
-            method: "PUT",
-          });
+          const res = await apiFetch(
+            `/api/admin/products/${productId}/activate`,
+            {
+              method: "PUT",
+            }
+          );
           const data = await res.json();
 
           if (data.success) {
-            alert("Termék újraaktiválva.");
+            showToast("Termék újraaktiválva.", "success");
             await loadProducts();
           } else {
-            alert(data.message || "Nem sikerült aktiválni a terméket.");
+            showToast(
+              data.message || "Nem sikerült aktiválni a terméket.",
+              "danger"
+            );
           }
         } catch (err) {
           console.error("Hiba a termék aktiválásakor:", err);
-          alert("Nem sikerült csatlakozni a szerverhez.");
+          showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
         }
 
         return;
@@ -288,6 +555,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const price = editBtn.dataset.price || "";
         const imageUrl = editBtn.dataset.imageUrl || "";
         const category = editBtn.dataset.category || "burger";
+        const isSpecialOffer = editBtn.dataset.isSpecialOffer === "1";
 
         editProductIdInput.value = productId;
         editProductNameInput.value = name;
@@ -297,6 +565,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (editProductCategorySelect) {
           editProductCategorySelect.value = category;
+        }
+        if (editProductIsSpecialOfferInput) {
+          editProductIsSpecialOfferInput.checked = isSpecialOffer;
         }
 
         editProductModal.show();
@@ -313,18 +584,42 @@ document.addEventListener("DOMContentLoaded", () => {
       const name = editProductNameInput.value.trim();
       const description = editProductDescriptionInput.value.trim();
       const price = editProductPriceInput.value;
-      const image_url = editProductImageUrlInput.value.trim();
+      let image_url = editProductImageUrlInput.value.trim();
       const category = editProductCategorySelect
         ? editProductCategorySelect.value
         : "burger";
+      const is_special_offer = Boolean(
+        editProductIsSpecialOfferInput && editProductIsSpecialOfferInput.checked
+      );
+
+      console.log("EDIT SUBMIT is_special_offer:", is_special_offer);
+
+      // Ha szerkesztéskor új képet választottunk, töltsük fel Multerrel
+      const editFile = editImageUpload.getSelectedFile
+        ? editImageUpload.getSelectedFile()
+        : null;
+
+      if (editFile) {
+        const uploadedUrl = await uploadImageFile(
+          editFile,
+          editImageUploadStatus
+        );
+        if (!uploadedUrl) {
+          return;
+        }
+        image_url = uploadedUrl;
+        if (editProductImageUrlInput) {
+          editProductImageUrlInput.value = image_url;
+        }
+      }
 
       if (!id || !name || !price) {
-        alert("A név és az ár megadása kötelező.");
+        showToast("A név és az ár megadása kötelező.", "warning");
         return;
       }
 
       try {
-        const res = await fetch(`/api/admin/products/${id}`, {
+        const res = await apiFetch(`/api/admin/products/${id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -335,21 +630,28 @@ document.addEventListener("DOMContentLoaded", () => {
             price: Number(price),
             image_url,
             category,
+            is_special_offer,
           }),
         });
 
         const data = await res.json();
 
         if (data.success) {
-          alert("Termék frissítve.");
+          showToast("Termék frissítve.", "success");
           editProductModal.hide();
           await loadProducts();
+          if (editImageUpload && editImageUpload.clearSelectedFile) {
+            editImageUpload.clearSelectedFile();
+          }
         } else {
-          alert(data.message || "Nem sikerült frissíteni a terméket.");
+          showToast(
+            data.message || "Nem sikerült frissíteni a terméket.",
+            "danger"
+          );
         }
       } catch (err) {
         console.error("Hiba a termék frissítésekor:", err);
-        alert("Nem sikerült csatlakozni a szerverhez.");
+        showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
       }
     });
   }
@@ -361,7 +663,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ordersAdminList.textContent = "Rendelések betöltése...";
 
     try {
-      const res = await fetch("/api/admin/orders");
+      const res = await apiFetch("/api/admin/orders");
       const data = await res.json();
 
       if (!data.success) {
@@ -437,6 +739,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <select 
                   class="form-select form-select-sm admin-order-status mb-1"
                   data-order-id="${o.id}"
+                  data-original-status="${o.status}"
                 >
                   <option value="pending"   ${
                     o.status === "pending" ? "selected" : ""
@@ -448,6 +751,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     o.status === "cancelled" ? "selected" : ""
                   }>Törölve</option>
                 </select>
+
                 <div class="d-flex justify-content-between align-items-center mt-1">
                   <span class="fw-semibold">${formatFt(o.total_price)} Ft</span>
                   <button 
@@ -495,7 +799,7 @@ document.addEventListener("DOMContentLoaded", () => {
     reservationsAdminList.textContent = "Foglalások betöltése...";
 
     try {
-      const res = await fetch("/api/admin/reservations");
+      const res = await apiFetch("/api/admin/reservations");
       const data = await res.json();
 
       if (!data.success) {
@@ -678,6 +982,162 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 🔹 7. Admin log betöltése (read-only)
+  async function loadAdminLogs() {
+    const detailLabels = {
+      name: "Név",
+      price: "Ár",
+      category: "Kategória",
+      is_active: "Aktív",
+      newStatus: "Új státusz",
+      oldStatus: "Régi státusz",
+      description: "Leírás",
+      is_special_offer: "Hétvégi ajánlat",
+    };
+
+    const statusTranslations = {
+      completed: "teljesítve",
+      cancelled: "törölve",
+      pending: "függőben",
+      confirmed: "megerősítve",
+      preparing: "készítés alatt",
+      delivered: "kiszállítva",
+    };
+
+    const entityTranslations = {
+      product: "termék",
+      order: "rendelés",
+      reservation: "foglalás",
+    };
+
+    const statusIcons = {
+      completed: "🟢",
+      cancelled: "🔴",
+      pending: "🟡",
+      preparing: "🟠",
+      confirmed: "🔵",
+      delivered: "📦",
+    };
+
+    if (!adminLogsList) return;
+
+    adminLogsList.textContent = "Admin log betöltése...";
+
+    try {
+      const res = await apiFetch("/api/admin/logs");
+      const data = await res.json();
+
+      if (!data.success) {
+        adminLogsList.textContent =
+          data.message || "Nem sikerült betölteni az admin logot.";
+        return;
+      }
+
+      const logs = data.logs || [];
+
+      if (logs.length === 0) {
+        adminLogsList.textContent = "Még nincsenek log bejegyzések.";
+        return;
+      }
+
+      adminLogsList.innerHTML = "";
+
+      logs.forEach((log) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "border rounded p-2 mb-2";
+
+        const dateLabel = log.created_at
+          ? new Date(log.created_at).toLocaleString("hu-HU")
+          : "";
+
+        const adminLabel =
+          log.admin_name || log.admin_email || "Ismeretlen admin";
+
+        let detailsData = null;
+
+        if (log.details_json) {
+          try {
+            const parsed =
+              typeof log.details_json === "string"
+                ? JSON.parse(log.details_json)
+                : log.details_json;
+
+            detailsData = parsed; // ❗ OBJEKTUM marad, nem string!
+          } catch {
+            detailsData = null;
+          }
+        }
+
+        const entityLabel =
+          entityTranslations[log.entity_type] || log.entity_type || "-";
+        const entityDisplay = `${entityLabel}${
+          log.entity_id ? " #" + log.entity_id : ""
+        }`;
+
+        wrapper.innerHTML = `
+          <div class="d-flex justify-content-between">
+            <div>
+              <div><strong>${log.action}</strong></div>
+              <div class="text-muted small">
+                Admin: ${adminLabel}
+              </div>
+              <div class="text-muted small">
+              Entitás: ${entityDisplay}
+            </div>
+            ${Object.entries(detailsData)
+              .map(([key, val]) => {
+                const label = detailLabels[key] || key;
+
+                // Státusz magyarítása
+                const translatedVal =
+                  typeof val === "string" && statusTranslations[val]
+                    ? statusTranslations[val]
+                    : val;
+
+                // Státusz ikon
+                const icon =
+                  typeof val === "string" && statusIcons[val]
+                    ? statusIcons[val] + " "
+                    : "";
+
+                // Ár formázása
+                if (key === "price") {
+                  return `<li><strong>${label}:</strong> ${translatedVal} Ft</li>`;
+                }
+
+                // Boolean (1/0) formázás
+                if (val === 1 || val === 0) {
+                  return `<li><strong>${label}:</strong> ${
+                    val === 1 ? "igen" : "nem"
+                  }</li>`;
+                }
+
+                // Boolean (true/false) formázás
+                if (val === true || val === false) {
+                  return `<li><strong>${label}:</strong> ${
+                    val ? "igen" : "nem"
+                  }</li>`;
+                }
+
+                return `<li><strong>${label}:</strong> ${icon}${translatedVal}</li>`;
+              })
+              .join("")}
+            </div>
+            <div class="text-end small text-muted">
+              ${dateLabel}
+            </div>
+          </div>
+        `;
+
+        adminLogsList.appendChild(wrapper);
+      });
+    } catch (err) {
+      console.error("Hiba az admin log betöltésekor:", err);
+      adminLogsList.textContent =
+        "Nem sikerült csatlakozni a szerverhez (admin log).";
+    }
+  }
+
   // 🔹 Foglalások státuszának módosítása (Jóváhagyás / Lemondás)
   if (reservationsAdminList) {
     reservationsAdminList.addEventListener("click", async (e) => {
@@ -688,10 +1148,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const id = confirmBtn.dataset.reservationId;
         if (!id) return;
 
-        if (!confirm("Biztosan jóváhagyod ezt a foglalást?")) return;
+        const ok = await showConfirm("Biztosan jóváhagyod ezt a foglalást?");
+        if (!ok) return;
 
         try {
-          const res = await fetch(`/api/admin/reservations/${id}/status`, {
+          const res = await apiFetch(`/api/admin/reservations/${id}/status`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -702,16 +1163,17 @@ document.addEventListener("DOMContentLoaded", () => {
           const data = await res.json();
 
           if (data.success) {
-            alert("Foglalás jóváhagyva.");
+            showToast("Foglalás jóváhagyva.", "success");
             await loadReservations();
           } else {
-            alert(
-              data.message || "Nem sikerült módosítani a foglalás státuszát."
+            showToast(
+              data.message || "Nem sikerült módosítani a foglalás státuszát.",
+              "danger"
             );
           }
         } catch (err) {
           console.error("Hiba a foglalás jóváhagyásakor:", err);
-          alert("Nem sikerült csatlakozni a szerverhez.");
+          showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
         }
 
         return;
@@ -721,10 +1183,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const id = cancelBtn.dataset.reservationId;
         if (!id) return;
 
-        if (!confirm("Biztosan lemondod ezt a foglalást?")) return;
+        const ok = await showConfirm("Biztosan lemondod ezt a foglalást?");
+        if (!ok) return;
 
         try {
-          const res = await fetch(`/api/admin/reservations/${id}/status`, {
+          const res = await apiFetch(`/api/admin/reservations/${id}/status`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -735,16 +1198,17 @@ document.addEventListener("DOMContentLoaded", () => {
           const data = await res.json();
 
           if (data.success) {
-            alert("Foglalás lemondva.");
+            showToast("Foglalás lemondva.", "success");
             await loadReservations();
           } else {
-            alert(
-              data.message || "Nem sikerült módosítani a foglalás státuszát."
+            showToast(
+              data.message || "Nem sikerült módosítani a foglalás státuszát.",
+              "danger"
             );
           }
         } catch (err) {
           console.error("Hiba a foglalás lemondásakor:", err);
-          alert("Nem sikerült csatlakozni a szerverhez.");
+          showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
         }
 
         return;
@@ -760,11 +1224,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const orderId = select.dataset.orderId;
       const newStatus = select.value;
+      const originalStatus = select.dataset.originalStatus || newStatus;
 
       if (!orderId || !newStatus) return;
 
+      // Magyar szöveg a státuszhoz (a modal üzenethez)
+      let statusTextHu = "";
+      switch (newStatus) {
+        case "pending":
+          statusTextHu = "Folyamatban";
+          break;
+        case "completed":
+          statusTextHu = "Teljesítve";
+          break;
+        case "cancelled":
+          statusTextHu = "Törölve";
+          break;
+        default:
+          statusTextHu = newStatus;
+      }
+
+      const ok = await showConfirm(
+        `Biztosan módosítod a rendelés státuszát erre: "${statusTextHu}"?`
+      );
+
+      if (!ok) {
+        // Ha mégse, állítsuk vissza a selectet az eredeti értékre
+        select.value = originalStatus;
+        return;
+      }
+
       try {
-        const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+        const res = await apiFetch(`/api/admin/orders/${orderId}/status`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -775,14 +1266,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (data.success) {
-          alert("Rendelés státusza frissítve.");
-          await loadOrders(); // újratöltjük, hogy a badge felirata is frissüljön
+          showToast("Rendelés státusza frissítve.", "success");
+          // Siker esetén frissítjük az "eredeti" státuszt is
+          select.dataset.originalStatus = newStatus;
+          await loadOrders();
         } else {
-          alert(data.message || "Nem sikerült frissíteni a státuszt.");
+          showToast(
+            data.message || "Nem sikerült frissíteni a státuszt.",
+            "danger"
+          );
+          // Ha szerver hiba, állítsuk vissza a régire
+          select.value = originalStatus;
         }
       } catch (err) {
         console.error("Hiba a rendelés státusz módosításakor:", err);
-        alert("Nem sikerült csatlakozni a szerverhez.");
+        showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
+        // Hiba esetén is visszaállítjuk a selectet
+        select.value = originalStatus;
       }
     });
   }
@@ -802,7 +1302,7 @@ document.addEventListener("DOMContentLoaded", () => {
       orderDetailsModal.show();
 
       try {
-        const res = await fetch(`/api/admin/orders/${orderId}`);
+        const res = await apiFetch(`/api/admin/orders/${orderId}`);
         const data = await res.json();
 
         if (!data.success) {
@@ -895,6 +1395,38 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
       }
     });
+  }
+
+  async function uploadImageFile(file, statusEl) {
+    if (!file) return null;
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    if (statusEl) statusEl.textContent = "Kép feltöltése folyamatban...";
+
+    try {
+      const res = await apiFetch("/api/admin/products/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success || !data.imageUrl) {
+        if (statusEl) statusEl.textContent = "Képfeltöltés sikertelen.";
+        showToast(data.message || "Nem sikerült feltölteni a képet.", "danger");
+        return null;
+      }
+
+      if (statusEl) statusEl.textContent = "Kép sikeresen feltöltve.";
+      return data.imageUrl;
+    } catch (err) {
+      console.error("Képfeltöltési hiba:", err);
+      if (statusEl) statusEl.textContent = "Képfeltöltés sikertelen.";
+      showToast("Nem sikerült csatlakozni a szerverhez.", "danger");
+      return null;
+    }
   }
 
   // 🔹 Indításkor: ellenőrizzük, hogy admin-e a user

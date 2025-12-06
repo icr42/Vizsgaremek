@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fogpifkáló – Admin</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+      <div class="container">
+        <span class="navbar-brand">Fogpifkáló – Admin</span>
+        <a href="fiok.html" class="btn btn-outline-light btn-sm"
+          >Vissza a fiókhoz</a
+        >
+      </div>
+    </nav>
+
+    <main class="container pb-5">
+      <div id="adminError" class="alert alert-danger d-none"></div>
+
+      <div id="adminContent" class="d-none">
+        <h1 class="h4 mb-4">Admin felület</h1>
+
+        <!-- TAB FEJLÉCEK -->
+        <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="products-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#products-pane"
+              type="button"
+              role="tab"
+              aria-controls="products-pane"
+              aria-selected="true"
+            >
+              Termékek
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="orders-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#orders-pane"
+              type="button"
+              role="tab"
+              aria-controls="orders-pane"
+              aria-selected="false"
+            >
+              Rendelések
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="reservations-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#reservations-pane"
+              type="button"
+              role="tab"
+              aria-controls="reservations-pane"
+              aria-selected="false"
+            >
+              Asztalfoglalások
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="adminlog-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#adminlog-pane"
+              type="button"
+              role="tab"
+              aria-controls="adminlog-pane"
+              aria-selected="false"
+            >
+              Admin log
+            </button>
+          </li>
+        </ul>
+
+        <!-- TAB TARTALOM -->
+        <div class="tab-content" id="adminTabsContent">
+          <!-- TERMÉKEK TAB -->
+          <div
+            class="tab-pane fade show active"
+            id="products-pane"
+            role="tabpanel"
+            aria-labelledby="products-tab"
+          >
+            <div class="card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Termékek</h2>
+                <div id="productsList" class="small"></div>
+                <hr />
+                <h3 class="h6">Új termék hozzáadása</h3>
+                <form id="newProductForm" class="small">
+                  <div class="mb-2">
+                    <label class="form-label">Név</label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      name="name"
+                      required
+                    />
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Leírás</label>
+                    <textarea
+                      class="form-control form-control-sm"
+                      name="description"
+                      rows="2"
+                    ></textarea>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Ár (Ft)</label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      name="price"
+                      required
+                    />
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Kategória</label>
+                    <select class="form-select form-select-sm" name="category">
+                      <option value="burger">Burger</option>
+                      <option value="side">Köret</option>
+                      <option value="drink">Innivaló</option>
+                      <option value="sauce">Szósz</option>
+                    </select>
+                  </div>
+
+                  <div class="mb-2">
+                    <label class="form-label">Kép URL</label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      name="image_url"
+                      id="editProductImageUrl"
+                      placeholder="https://... vagy használd a feltöltést lentebb"
+                    />
+                  </div>
+
+                  <div class="form-check mb-2">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="newProductIsSpecialOffer"
+                      name="is_special_offer"
+                    />
+                    <label
+                      class="form-check-label"
+                      for="newProductIsSpecialOffer"
+                    >
+                      Hétvégi ajánlat
+                    </label>
+                  </div>
+
+                  <div class="mb-2">
+                    <label class="form-label">Kép feltöltése</label>
+                    <div
+                      id="newImageDropZone"
+                      class="border rounded py-3 px-3 text-center text-muted"
+                      style="cursor: pointer"
+                    >
+                      Húzd ide a képet vagy
+                      <span
+                        id="newImageBrowseTrigger"
+                        class="text-primary text-decoration-underline"
+                        role="button"
+                        >válaszd ki</span
+                      >
+                      <input
+                        type="file"
+                        id="newImageFileInput"
+                        accept="image/*"
+                        class="d-none"
+                      />
+                    </div>
+                    <small
+                      class="text-muted d-block mt-1"
+                      id="newImageUploadStatus"
+                    ></small>
+                    <img
+                      id="newImagePreview"
+                      class="mt-2 img-fluid d-none"
+                      alt="Előnézet"
+                      style="max-height: 200px; object-fit: contain"
+                    />
+                  </div>
+
+                  <button type="submit" class="btn btn-sm btn-primary mt-2">
+                    Hozzáadás
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- RENDELÉSEK TAB -->
+          <div
+            class="tab-pane fade"
+            id="orders-pane"
+            role="tabpanel"
+            aria-labelledby="orders-tab"
+          >
+            <div class="card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Rendelések</h2>
+                <div id="ordersAdminList" class="small"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- FOGLALÁSOK TAB -->
+          <div
+            class="tab-pane fade"
+            id="reservations-pane"
+            role="tabpanel"
+            aria-labelledby="reservations-tab"
+          >
+            <div class="card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Asztalfoglalások</h2>
+                <div id="reservationsAdminList" class="small"></div>
+              </div>
+            </div>
+          </div>
+          <!-- ADMIN LOG TAB -->
+          <div
+            class="tab-pane fade"
+            id="adminlog-pane"
+            role="tabpanel"
+            aria-labelledby="adminlog-tab"
+          >
+            <div class="card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Admin napló</h2>
+                <div id="adminLogsList" class="small"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TOAST ÉRTESÍTÉS -->
+    <div
+      class="toast-container position-fixed bottom-0 end-0 p-3"
+      style="z-index: 1100"
+    >
+      <div
+        id="adminToast"
+        class="toast align-items-center text-bg-success border-0"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <div class="d-flex">
+          <div id="adminToastText" class="toast-body">
+            Művelet sikeresen végrehajtva.
+          </div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Bezárás"
+          ></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEGERŐSÍTÉS MODAL (confirm helyett) -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Biztos vagy benne?</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Bezárás"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p id="confirmModalMessage">
+              Biztosan el akarod végezni ezt a műveletet?
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Mégse
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              id="confirmModalConfirmBtn"
+            >
+              Igen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TERMÉK SZERKESZTŐ MODAL -->
+    <div
+      class="modal fade"
+      id="editProductModal"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Termék szerkesztése</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Bezárás"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="editProductForm" class="small">
+              <input type="hidden" name="id" id="editProductId" />
+
+              <div class="mb-2">
+                <label class="form-label">Név</label>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  name="name"
+                  id="editProductName"
+                  required
+                />
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Leírás</label>
+                <textarea
+                  class="form-control form-control-sm"
+                  name="description"
+                  id="editProductDescription"
+                  rows="2"
+                ></textarea>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Ár (Ft)</label>
+                <input
+                  type="number"
+                  class="form-control form-control-sm"
+                  name="price"
+                  id="editProductPrice"
+                  required
+                />
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Kategória</label>
+                <select
+                  class="form-select form-select-sm"
+                  name="category"
+                  id="editProductCategory"
+                >
+                  <option value="burger">Burger</option>
+                  <option value="side">Köret</option>
+                  <option value="drink">Innivaló</option>
+                  <option value="sauce">Szósz</option>
+                </select>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Kép URL</label>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  name="image_url"
+                  id="editProductImageUrl"
+                  placeholder="https://... vagy használd a feltöltést lentebb"
+                />
+              </div>
+
+              <div class="form-check mb-2">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="editProductIsSpecialOffer"
+                  name="is_special_offer"
+                />
+                <label class="form-check-label" for="newProductIsSpecialOffer">
+                  Hétvégi ajánlat
+                </label>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Kép feltöltése</label>
+                <div
+                  id="editImageDropZone"
+                  class="border rounded py-3 px-3 text-center text-muted"
+                  style="cursor: pointer"
+                >
+                  Húzd ide a képet vagy
+                  <span
+                    id="editImageBrowseTrigger"
+                    class="text-primary text-decoration-underline"
+                    role="button"
+                    >válaszd ki</span
+                  >
+                  <input
+                    type="file"
+                    id="editImageFileInput"
+                    accept="image/*"
+                    class="d-none"
+                  />
+                </div>
+                <small
+                  class="text-muted d-block mt-1"
+                  id="editImageUploadStatus"
+                ></small>
+                <img
+                  id="editImagePreview"
+                  class="mt-2 img-fluid d-none"
+                  alt="Előnézet"
+                  style="max-height: 200px; object-fit: contain"
+                />
+              </div>
+
+              <button type="submit" class="btn btn-sm btn-primary mt-2">
+                Mentés
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RENDELÉS RÉSZLETEI MODAL -->
+    <div
+      class="modal fade"
+      id="orderDetailsModal"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="orderDetailsTitle">
+              Rendelés részletei
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Bezárás"
+            ></button>
+          </div>
+          <div class="modal-body" id="orderDetailsBody">
+            <!-- Ide töltjük be JS-ből a részleteket -->
+            <div class="text-muted small">Betöltés...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="admin.js"></script>
+    <script src="api.js"></script>
+  </body>
+</html>
