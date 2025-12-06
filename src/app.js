@@ -13,6 +13,8 @@ import publicRoutes from "./routes/public.routes.js";
 import reservationRoutes from "./routes/reservations.routes.js";
 import myReservationsRoutes from "./routes/my-reservations.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import deliveryRoutes from "./routes/delivery.routes.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +44,7 @@ app.use("/api", publicRoutes);
 app.use("/api", reservationRoutes);
 app.use("/api", myReservationsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/delivery", deliveryRoutes);
 
 // 404 API fallback
 app.use("/api", (req, res) => {

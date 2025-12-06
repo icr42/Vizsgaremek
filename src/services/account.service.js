@@ -36,6 +36,7 @@ export function updateProfile(req, res) {
       name,
       email,
       isAdmin: (req.user && req.user.isAdmin) || false,
+      isDelivery: (req.user && req.user.isDelivery) || false,
     };
 
     const accessToken = jwt.sign(updatedUser, ACCESS_TOKEN_SECRET, {

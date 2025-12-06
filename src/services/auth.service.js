@@ -19,6 +19,7 @@ function buildUserPayloadFromRow(row) {
     name: row.name,
     email: row.email,
     isAdmin: !!row.is_admin,
+    isDelivery: !!row.is_delivery,
   };
 }
 
@@ -216,7 +217,7 @@ export function login(req, res) {
   }
 
   const sql =
-    "SELECT id, name, email, password_hash, is_admin FROM users WHERE email = ? LIMIT 1";
+    "SELECT id, name, email, password_hash, is_admin, is_delivery FROM users WHERE email = ? LIMIT 1";
 
   db.query(sql, [email], (err, rows) => {
     if (err) {
@@ -300,6 +301,7 @@ export function me(req, res) {
       name: req.user.name,
       email: req.user.email,
       isAdmin: !!req.user.isAdmin,
+      isDelivery: !!req.user.isDelivery,
     },
   });
 }
@@ -313,6 +315,7 @@ export function adminSelf(req, res) {
       name: req.user.name,
       email: req.user.email,
       isAdmin: !!req.user.isAdmin,
+      isDelivery: !!req.user.isDelivery,
     },
   });
 }

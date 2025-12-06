@@ -48,7 +48,10 @@ export async function authWithRefreshMiddleware(req, res, next) {
         return next();
       } catch (err) {
         // pl. TokenExpiredError – ez még nem baj, megyünk tovább refresh-re
-        console.warn("Access token verify hiba (megyünk tovább refresh-re):", err.message);
+        console.warn(
+          "Access token verify hiba (megyünk tovább refresh-re):",
+          err.message
+        );
       }
     }
 
@@ -79,12 +82,20 @@ export async function authWithRefreshMiddleware(req, res, next) {
     try {
       payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
     } catch (err) {
-      console.error("Refresh token verify hiba (globális middleware):", err.message);
+      console.error(
+        "Refresh token verify hiba (globális middleware):",
+        err.message
+      );
       // ha hibás → töröljük a DB-ből is
       try {
-        await query("DELETE FROM refresh_tokens WHERE id = ?", [storedToken.id]);
+        await query("DELETE FROM refresh_tokens WHERE id = ?", [
+          storedToken.id,
+        ]);
       } catch (deleteErr) {
-        console.error("Refresh token törlés hiba verify fail után:", deleteErr.message);
+        console.error(
+          "Refresh token törlés hiba verify fail után:",
+          deleteErr.message
+        );
       }
       req.user = null;
       return next();
@@ -94,7 +105,7 @@ export async function authWithRefreshMiddleware(req, res, next) {
 
     // 2/c) Felhasználó lekérése
     const userRows = await query(
-      "SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1",
+      "SELECT id, name, email, is_admin, is_delivery FROM users WHERE id = ? LIMIT 1",
       [userId]
     );
     const userRow = userRows[0];
@@ -102,9 +113,14 @@ export async function authWithRefreshMiddleware(req, res, next) {
     if (!userRow) {
       // Nincs ilyen user → töröljük a refresh tokent is
       try {
-        await query("DELETE FROM refresh_tokens WHERE id = ?", [storedToken.id]);
+        await query("DELETE FROM refresh_tokens WHERE id = ?", [
+          storedToken.id,
+        ]);
       } catch (deleteErr) {
-        console.error("Refresh token törlés hiba (user nem található):", deleteErr.message);
+        console.error(
+          "Refresh token törlés hiba (user nem található):",
+          deleteErr.message
+        );
       }
       req.user = null;
       return next();
@@ -115,6 +131,7 @@ export async function authWithRefreshMiddleware(req, res, next) {
       name: userRow.name,
       email: userRow.email,
       isAdmin: !!userRow.is_admin,
+      isDelivery: !!userRow.is_delivery,
     };
 
     // 2/d) Új ACCESS + REFRESH token generálása (rotáció)
@@ -122,11 +139,9 @@ export async function authWithRefreshMiddleware(req, res, next) {
       expiresIn: ACCESS_TOKEN_EXPIRES_IN,
     });
 
-    const newRefreshToken = jwt.sign(
-      { id: userRow.id },
-      REFRESH_TOKEN_SECRET,
-      { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
-    );
+    const newRefreshToken = jwt.sign({ id: userRow.id }, REFRESH_TOKEN_SECRET, {
+      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    });
 
     const decodedNewRefresh = jwt.decode(newRefreshToken);
     const newExpiresAt =
@@ -140,15 +155,26 @@ export async function authWithRefreshMiddleware(req, res, next) {
         [newRefreshToken, newExpiresAt, storedToken.id]
       );
     } catch (err) {
-      console.error("Refresh token rotáció DB hiba (globális middleware):", err.message);
+      console.error(
+        "Refresh token rotáció DB hiba (globális middleware):",
+        err.message
+      );
       req.user = null;
       return next();
     }
 
     // 2/e) Cookie-k frissítése
     res
-      .cookie(ACCESS_TOKEN_COOKIE_NAME, newAccessToken, ACCESS_TOKEN_COOKIE_OPTIONS)
-      .cookie(REFRESH_TOKEN_COOKIE_NAME, newRefreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
+      .cookie(
+        ACCESS_TOKEN_COOKIE_NAME,
+        newAccessToken,
+        ACCESS_TOKEN_COOKIE_OPTIONS
+      )
+      .cookie(
+        REFRESH_TOKEN_COOKIE_NAME,
+        newRefreshToken,
+        REFRESH_TOKEN_COOKIE_OPTIONS
+      );
 
     // 2/f) req.user beállítása
     req.user = userPayload;
@@ -215,4 +241,22 @@ export function requireAdminOrErrorPage(req, res, next) {
       .status(500)
       .sendFile(path.resolve(__dirname, "../../public/error500.html"));
   }
+}
+
+export function requireDelivery(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Bejelentkezés szükséges.",
+    });
+  }
+
+  if (!req.user.isDelivery) {
+    return res.status(403).json({
+      success: false,
+      message: "Futár jogosultság szükséges.",
+    });
+  }
+
+  return next();
 }
