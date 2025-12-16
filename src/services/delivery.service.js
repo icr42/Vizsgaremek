@@ -1,4 +1,5 @@
 import { db } from "../repositories/db.repository.js";
+import { emitPendingOrdersUpdated } from "../config/websocket.js";
 
 // Csak folyamatban lévő rendelések futárnak
 export function getPendingOrders(req, res) {
@@ -70,6 +71,8 @@ export function completeOrder(req, res) {
           "A rendelés nem található, vagy már nem folyamatban lévő státuszban van.",
       });
     }
+    // Futár app real time frissítése
+    emitPendingOrdersUpdated();
 
     return res.json({
       success: true,
