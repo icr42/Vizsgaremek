@@ -271,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const newPassword = newPasswordInput.value;
 
       if (!currentPassword || !newPassword) {
-        alert("Kérlek töltsd ki mindkét jelszó mezőt.");
+        showAlert("danger", "Kérlek töltsd ki mindkét jelszó mezőt.");
         return;
       }
 
@@ -287,14 +287,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (data.success) {
-          alert("Jelszó frissítve.");
+          showAlert("success", "Jelszó frissítve.");
           passwordForm.reset();
         } else {
-          alert(data.message || "Nem sikerült frissíteni a jelszót.");
+          showAlert("warning", data.message || "Nem sikerült frissíteni a jelszót.");
         }
       } catch (err) {
         console.error("Hiba a jelszó frissítésekor:", err);
-        alert("Nem sikerült csatlakozni a szerverhez.");
+        showAlert("danger","Nem sikerült csatlakozni a szerverhez.");
       }
     });
   }
@@ -334,21 +334,37 @@ document.addEventListener("DOMContentLoaded", () => {
     userConfirmModal = new bootstrap.Modal(userConfirmModalEl);
   }
 
-  const editReservationModalEl = document.getElementById("editReservationModal");
+  const editReservationModalEl = document.getElementById(
+    "editReservationModal"
+  );
   const editReservationForm = document.getElementById("editReservationForm");
-  const editReservationPeopleInput = document.getElementById("editReservationPeople");
-  const editReservationNoteInput = document.getElementById("editReservationNote");
+  const editReservationPeopleInput = document.getElementById(
+    "editReservationPeople"
+  );
+  const editReservationNoteInput = document.getElementById(
+    "editReservationNote"
+  );
   let editReservationModal;
   if (editReservationModalEl && typeof bootstrap !== "undefined") {
     editReservationModal = new bootstrap.Modal(editReservationModalEl);
   }
 
-  const editReservationTimeModalEl = document.getElementById("editReservationTimeModal");
-  const editReservationTimeForm = document.getElementById("editReservationTimeForm");
-  const editReservationDateInput = document.getElementById("editReservationDate");
-  const editReservationFromInput = document.getElementById("editReservationFrom");
+  const editReservationTimeModalEl = document.getElementById(
+    "editReservationTimeModal"
+  );
+  const editReservationTimeForm = document.getElementById(
+    "editReservationTimeForm"
+  );
+  const editReservationDateInput = document.getElementById(
+    "editReservationDate"
+  );
+  const editReservationFromInput = document.getElementById(
+    "editReservationFrom"
+  );
   const editReservationToInput = document.getElementById("editReservationTo");
-  const editReservationTableInput = document.getElementById("editReservationTable");
+  const editReservationTableInput = document.getElementById(
+    "editReservationTable"
+  );
   let editReservationTimeModal;
   if (editReservationTimeModalEl && typeof bootstrap !== "undefined") {
     editReservationTimeModal = new bootstrap.Modal(editReservationTimeModalEl);
@@ -483,7 +499,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       function cleanup() {
         editReservationForm.removeEventListener("submit", handleSubmit);
-        editReservationModalEl.removeEventListener("hidden.bs.modal", handleHidden);
+        editReservationModalEl.removeEventListener(
+          "hidden.bs.modal",
+          handleHidden
+        );
       }
 
       editReservationForm.addEventListener("submit", handleSubmit);
@@ -637,7 +656,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (data.loggedIn) {
         if (authSection) authSection.classList.add("d-none");
         if (accountSection) accountSection.classList.remove("d-none");
-        
+
         const hero = document.getElementById("hero");
         if (hero) hero.classList.add("d-none");
 
@@ -715,18 +734,27 @@ document.addEventListener("DOMContentLoaded", () => {
         const formattedDate = createdAt.toLocaleString("hu-HU");
 
         let statusText = "";
+        let badgeClass = "";
+
         switch (order.status) {
           case "pending":
             statusText = "Folyamatban";
+            badgeClass = "bg-warning text-dark";
             break;
+
           case "completed":
             statusText = "Teljesítve";
+            badgeClass = "bg-success";
             break;
+
           case "cancelled":
             statusText = "Törölve";
+            badgeClass = "bg-danger";
             break;
+
           default:
             statusText = order.status;
+            badgeClass = "bg-secondary";
         }
 
         // tételek listája
@@ -752,7 +780,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <strong>Rendelés #${order.id}</strong>
             <div class="text-muted small">${formattedDate}</div>
           </div>
-          <span class="badge bg-secondary align-self-start">${statusText}</span>
+          <span class="badge ${badgeClass} align-self-start">${statusText}</span>
         </div>
         <div class="mb-2 small">
           ${itemsHtml}
@@ -994,7 +1022,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  
   async function handleEditReservationTime(
     id,
     currentDate,
@@ -1039,10 +1066,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      showUserToast(
-        "Foglalásod időpontját sikeresen módosítottuk.",
-        "success"
-      );
+      showUserToast("Foglalásod időpontját sikeresen módosítottuk.", "success");
       await loadReservations();
     } catch (err) {
       console.error("Idősáv módosítási hiba:", err);
@@ -1121,7 +1145,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showUserToast("Nem sikerült csatlakozni a szerverhez.", "danger");
     }
   }
-function formatDateOnly(value) {
+  function formatDateOnly(value) {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
     return d.toLocaleDateString("hu-HU");

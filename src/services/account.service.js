@@ -66,6 +66,11 @@ export function changePassword(req, res) {
       success: false,
       message: "A jelenlegi és az új jelszó megadása kötelező.",
     });
+  } else if (currentPassword === newPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "Az új jelszónak különböznie kell a jelenlegi jelszótól.",
+    });
   }
 
   const selectSql = "SELECT password_hash FROM users WHERE id = ? LIMIT 1";

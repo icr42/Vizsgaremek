@@ -711,18 +711,27 @@ document.addEventListener("DOMContentLoaded", () => {
             const formattedDate = createdAt.toLocaleString("hu-HU");
 
             let statusText = "";
+            let badgeClass = "";
+
             switch (o.status) {
               case "pending":
                 statusText = "Folyamatban";
+                badgeClass = "bg-warning text-dark";
                 break;
+
               case "completed":
                 statusText = "Teljesítve";
+                badgeClass = "bg-success";
                 break;
+
               case "cancelled":
                 statusText = "Törölve";
+                badgeClass = "bg-danger";
                 break;
+
               default:
                 statusText = o.status;
+                badgeClass = "bg-secondary";
             }
 
             wrapper.innerHTML = `
@@ -734,7 +743,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
               <div class="text-end" style="min-width: 190px;">
                 <div class="mb-1">
-                  <span class="badge bg-secondary">${statusText}</span>
+                  <span class="badge ${badgeClass}">${statusText}</span>
                 </div>
                 <select 
                   class="form-select form-select-sm admin-order-status mb-1"

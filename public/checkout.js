@@ -4,11 +4,32 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("checkoutForm");
     const errorBox = document.getElementById("checkoutError");
 
+    // Toast (jobb alsó sarok)
+    const checkoutToastEl = document.getElementById("checkoutToast");
+    const checkoutToastTextEl = document.getElementById("checkoutToastText");
+    let checkoutToastInstance;
+    if (checkoutToastEl && typeof bootstrap !== "undefined") {
+        checkoutToastInstance = new bootstrap.Toast(checkoutToastEl);
+    }
+
+    function showCheckoutToast(message, type = "success") {
+        if (!checkoutToastEl || !checkoutToastTextEl || typeof bootstrap === "undefined") {
+            console.log("[" + type + "]", message);
+            return;
+        }
+        checkoutToastTextEl.textContent = message;
+        checkoutToastEl.className = `toast align-items-center text-bg-${type} border-0`;
+        if (!checkoutToastInstance) {
+            checkoutToastInstance = new bootstrap.Toast(checkoutToastEl);
+        }
+        checkoutToastInstance.show();
+    }
+
     async function loadCheckoutCart() {
         try {
             const res = await apiFetch("/api/cart");
             if (res.status === 401) {
-                alert("A rendeléshez előbb jelentkezz be.");
+                showCheckoutToast("A rendeléshez előbb jelentkezz be.", "danger");
                 window.location.href = "fiok.html";
                 return;
             }
@@ -85,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     errorBox.textContent = msg;
                     errorBox.classList.remove("d-none");
                 } else {
-                    alert(msg);
+                    showCheckoutToast(msg, "danger");
                 }
                 return;
             }
@@ -108,8 +129,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    alert(data.message || "Rendelésedet fogadtuk, köszönjük!");
-                    window.location.href = "fiok.html";
+                    showCheckoutToast(
+                        data.message || "Sikeresen leadta a rendelését!",
+                        "success"
+                    );
+                    // Hagyd, hogy a toast látszódjon egy pillanatig, aztán átirányítunk
+                    setTimeout(() => {
+                        window.location.href = "fiok.html";
+                    }, 1400);
                 } else {
                     const msg =
                         data.message || "Nem sikerült leadni a rendelést.";
@@ -117,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         errorBox.textContent = msg;
                         errorBox.classList.remove("d-none");
                     } else {
-                        alert(msg);
+                        showCheckoutToast(msg, "danger");
                     }
                 }
             } catch (err) {
@@ -127,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     errorBox.textContent = msg;
                     errorBox.classList.remove("d-none");
                 } else {
-                    alert(msg);
+                    showCheckoutToast(msg, "danger");
                 }
             }
         });
