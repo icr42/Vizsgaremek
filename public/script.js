@@ -9,6 +9,32 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentPasswordInput = document.getElementById("currentPassword");
   const newPasswordInput = document.getElementById("newPassword");
 
+  // --- Globális confirm modal injektálása (index/menu oldalakon is) ---
+  if (!document.getElementById("userConfirmModal")) {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `
+    <div class="modal fade" id="userConfirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Biztos vagy benne?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bezárás"></button>
+          </div>
+          <div class="modal-body">
+            <p id="userConfirmMessage">Biztosan el szeretnéd végezni ezt a műveletet?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Mégse</button>
+            <button type="button" class="btn btn-danger" id="userConfirmOkBtn">Igen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    `
+    );
+  }
+
   buttons.forEach((btn) => {
     btn.addEventListener("click", async () => {
       const productId = btn.dataset.productId;
@@ -144,21 +170,22 @@ document.addEventListener("DOMContentLoaded", () => {
         row.className =
           "d-flex justify-content-between align-items-center mb-1";
         row.innerHTML = `
-    <div class="me-2">
-      <div>${item.name}</div>
-      <div class="text-muted">x ${item.quantity}</div>
-    </div>
-    <div class="text-end">
-      ${formatFt(item.line_total)} Ft
-      <button 
-        class="btn btn-link btn-sm text-danger p-0 ms-2 cart-remove-btn" 
-        data-product-id="${item.product_id}"
-        title="Tétel törlése"
-      >
-        <i class="bi bi-trash"></i>
-      </button>
-    </div>
-  `;
+          <div class="me-2">
+            <div>${item.name}</div>
+            <div class="text-muted">x ${item.quantity}</div>
+          </div>
+          <div class="text-end">
+            ${formatFt(item.line_total)} Ft
+            <button 
+              class="btn btn-link btn-sm text-danger p-0 ms-2 cart-remove-btn" 
+              data-product-id="${item.product_id}"
+              data-product-name="${item.name}"
+              title="Tétel törlése"
+            >
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        `;
         list.appendChild(row);
       });
 
@@ -166,14 +193,14 @@ document.addEventListener("DOMContentLoaded", () => {
       footer.className = "border-top pt-2 mt-2";
 
       footer.innerHTML = `
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <strong>Összesen:</strong>
-    <strong>${formatFt(totalPrice)} Ft</strong>
-  </div>
-  <button class="btn btn-sm btn-success w-100 mt-1 cart-checkout-btn">
-    Rendelés véglegesítése
-  </button>
-`;
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong>Összesen:</strong>
+          <strong>${formatFt(totalPrice)} Ft</strong>
+        </div>
+        <button class="btn btn-sm btn-success w-100 mt-1 cart-checkout-btn">
+          Rendelés véglegesítése
+        </button>
+      `;
 
       cartDropdownContent.innerHTML = "";
       cartDropdownContent.appendChild(list);
@@ -211,7 +238,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const productId = removeBtn.dataset.productId;
         if (!productId) return;
 
-        if (!confirm("Biztosan törlöd ezt a tételt a kosaradból?")) return;
+        const productName = removeBtn.dataset.productName || "ezt a tételt";
+        const ok = await showUserConfirm(
+          `Biztosan törlöd a kosaradból: ${productName}?`
+        );
+        if (!ok) return;
 
         try {
           const res = await apiFetch("/api/cart/remove", {
@@ -290,11 +321,14 @@ document.addEventListener("DOMContentLoaded", () => {
           showAlert("success", "Jelszó frissítve.");
           passwordForm.reset();
         } else {
-          showAlert("warning", data.message || "Nem sikerült frissíteni a jelszót.");
+          showAlert(
+            "warning",
+            data.message || "Nem sikerült frissíteni a jelszót."
+          );
         }
       } catch (err) {
         console.error("Hiba a jelszó frissítésekor:", err);
-        showAlert("danger","Nem sikerült csatlakozni a szerverhez.");
+        showAlert("danger", "Nem sikerült csatlakozni a szerverhez.");
       }
     });
   }
@@ -384,7 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
     userToastInstance.show();
   }
 
-  function showUserConfirm(message) {
+  window.showUserConfirm = function(message) {
     return new Promise((resolve) => {
       if (
         !userConfirmModal ||

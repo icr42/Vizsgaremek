@@ -1,0 +1,96 @@
+/* GLASS / ELEGÁNS NAVBAR */
+.navbar-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 15, 15, 0.85),
+    rgba(15, 15, 15, 0.65)
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* NAV LINK */
+.navbar-glass .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  transition: color 0.2s ease;
+}
+
+.navbar-glass .nav-link:hover,
+.navbar-glass .nav-link.active {
+  color: #f6b23a;
+}
+
+/* LOGÓ */
+.navbar-brand span {
+  letter-spacing: 0.6px;
+  color: #fff;
+}
+
+/* KOSÁR */
+.btn-cart {
+  color: #fff;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+}
+
+.btn-cart:hover {
+  color: #f6b23a;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: #dc3545;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* FIÓK */
+.btn-account {
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+}
+
+.btn-account:hover {
+  color: #f6b23a;
+  border-color: #f6b23a;
+}
+
+.navbar-logo {
+  position: absolute;
+  height: 118px;        /* Itt lehet nagy */
+  width: auto;
+
+  top: 50%;
+  transform: translateY(-50%);
+
+  pointer-events: none; /* ne zavarja a klikkeleket */
+  filter: invert(1) brightness(2); /* fehér logó */
+}
+
+.navbar-brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.brand-text {
+  margin-left: 100px;   /* EZ A KULCS */
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+
+
+
+

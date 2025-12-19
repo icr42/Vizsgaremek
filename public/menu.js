@@ -12,25 +12,36 @@ document.addEventListener("DOMContentLoaded", () => {
         const col = document.createElement("div");
         col.className = "col-md-6 col-lg-4";
 
+        // Kép kezelése: adminból jöhet abszolút (/uploads/...) vagy relatív (uploads/...)
+        const fallbackImg = "images/farmburger.png";
+        let imgSrc = product.image_url || product.imageUrl || product.image || "";
+
+        if (imgSrc && !imgSrc.startsWith("http") && !imgSrc.startsWith("/")) {
+            imgSrc = "/" + imgSrc.replace(/^\/+/, "");
+        }
+        if (!imgSrc) imgSrc = fallbackImg;
+
         col.innerHTML = `
-            <div class="card menu-card h-100 shadow-sm">
-              <div class="card-body d-flex flex-column">
-                <h5 class="card-title mb-1">${product.name}</h5>
-                ${product.description
-                ? `<p class="card-text small text-muted mb-2">${product.description}</p>`
-                : ""
-            }
-                <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
-                  <strong>${formatFt(product.price)} Ft</strong>
-                  <button 
-                    class="btn btn-sm btn-primary order-btn"
-                    data-product-id="${product.id}">
-                    Rendelés
-                  </button>
-                </div>
-              </div>
+        <div class="menu-image-card">
+            <img src="${imgSrc}" alt="${product.name}">
+
+            <div class="menu-image-overlay">
+            <h5 class="product-title">${product.name}</h5>
+            <p class="product-desc">
+                ${product.description || " "}
+            </p>
+
+            <div class="overlay-bottom">
+                <div class="product-price">${product.price} Ft</div>
+                <button 
+                class="btn btn-sm btn-light order-btn"
+                data-product-id="${product.id}">
+                Rendelés
+                </button>
             </div>
-          `;
+            </div>
+        </div>
+        `;
         return col;
     }
 
@@ -40,8 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
 
             if (!data.success) {
-                const msg =
-                    data.message || "Nem sikerült betölteni a menüt.";
+                const msg = data.message || "Nem sikerült betölteni a menüt.";
                 burgerList.textContent = msg;
                 sideList.textContent = msg;
                 drinkList.textContent = msg;
