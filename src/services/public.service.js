@@ -26,7 +26,7 @@ export function getProducts(req, res) {
 
 export function getMenu(req, res) {
   const sql = `
-    SELECT id, name, description, price, category
+    SELECT id, name, description, price, image_url, category
     FROM products
     WHERE is_active = 1
     ORDER BY category, name

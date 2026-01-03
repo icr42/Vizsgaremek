@@ -100,6 +100,9 @@
     color: rgba(0,0,0,0.65);
     font-size: 0.95rem;
     font-family: "Pacifico", cursive;
+    margin-left: auto;
+    max-width: 80%;
+
 }
 
 .about-collage{
@@ -113,10 +116,29 @@
     box-shadow: 0 8px 30px rgba(0,0,0,0.08);
 }
 
-.about-img{
+.about-img-nagy{
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 80%;
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+}
+
+.about-img-kicsi1{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 10%;
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+}
+
+.about-img-kicsi2{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
     border-radius: 18px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.10);
 }
@@ -135,4 +157,25 @@
     .about-title{
         font-size: 2rem;
     }
+}
+
+.wo-title{
+  position: relative;
+  display: inline-block;
+  font-weight: 700;
+}
+
+.wo-title::after{
+  content: "";
+  display: block;
+  width: 260px;          /* vonal hossza */
+  height: 3px;           /* vastagság */
+  margin-top: 0.6rem;
+  background: linear-gradient(
+    90deg,
+    #facc15 0%,
+    #f59e0b 60%,
+    rgba(245,158,11,0) 100%
+  );
+  border-radius: 999px;
 }

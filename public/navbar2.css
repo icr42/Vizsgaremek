@@ -7,8 +7,7 @@
   );
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* NAV LINK */
@@ -86,7 +85,7 @@
 
 .brand-text {
   margin-left: 100px;   /* EZ A KULCS */
-  font-weight: -100;
+  font-weight: 700;
   color: #fff;
   letter-spacing: 0.6px;
   white-space: nowrap;
