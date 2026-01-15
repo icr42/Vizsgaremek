@@ -215,6 +215,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  window.loadCartSummary = loadCartSummary;
+
   function updateCartBadge(count) {
     if (!cartCountBadge) return;
     if (count > 0) {

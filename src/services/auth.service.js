@@ -384,7 +384,7 @@ export async function refresh(req, res) {
   const userId = payload.id;
 
   const sql =
-    "SELECT id, name, email, is_admin FROM users WHERE id = ? LIMIT 1";
+    "SELECT id, name, email, is_admin, is_delivery FROM users WHERE id = ? LIMIT 1";
 
   db.query(sql, [userId], async (err, rows) => {
     if (err) {

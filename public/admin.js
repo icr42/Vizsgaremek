@@ -85,6 +85,15 @@ document.addEventListener("DOMContentLoaded", () => {
     orderDetailsModal = new bootstrap.Modal(orderDetailsModalEl);
   }
 
+  // Ingredients UI (új + szerkesztés)
+  const newIngredientsWrap = document.getElementById("newIngredientsWrap");
+  const newIngredientsAddBtn = document.getElementById("newIngredientsAddBtn");
+
+  const editIngredientsWrap = document.getElementById("editIngredientsWrap");
+  const editIngredientsAddBtn = document.getElementById(
+    "editIngredientsAddBtn"
+  );
+
   // Kis helper az Ft formázáshoz
   function formatFt(value) {
     return Math.round(Number(value)).toLocaleString("hu-HU");
@@ -96,6 +105,78 @@ document.addEventListener("DOMContentLoaded", () => {
     adminError.classList.remove("d-none");
     adminContent.classList.add("d-none");
   }
+
+  // =========================
+  // Ingredients editor helper
+  // =========================
+  function createIngredientRow(initialValue = "") {
+    const row = document.createElement("div");
+    row.className = "input-group input-group-sm";
+
+    row.innerHTML = `
+      <input type="text" class="form-control ingredient-input mb-2" placeholder="pl. Bacon" />
+      <button class="btn btn-outline-danger ingredient-remove-btn mb-2" type="button" title="Törlés">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    `;
+
+    const input = row.querySelector(".ingredient-input");
+    input.value = initialValue;
+
+    // Enter -> új sor (ha van hozzá add gomb), vagy csak blur
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+    });
+
+    return row;
+  }
+
+  function collectIngredientsFromWrap(wrapEl) {
+    if (!wrapEl) return [];
+    const inputs = wrapEl.querySelectorAll("input.ingredient-input");
+    return Array.from(inputs)
+      .map((i) => i.value.trim())
+      .filter(Boolean);
+  }
+
+  function setIngredientsToWrap(wrapEl, arr) {
+    if (!wrapEl) return;
+    wrapEl.innerHTML = "";
+    (arr || []).forEach((v) => wrapEl.appendChild(createIngredientRow(v)));
+  }
+
+  function wireIngredientsEditor({ wrapEl, addBtnEl }) {
+    if (!wrapEl || !addBtnEl) return;
+
+    // + gomb -> új sor, fókusz
+    addBtnEl.addEventListener("click", () => {
+      const row = createIngredientRow("");
+      wrapEl.appendChild(row);
+      const input = row.querySelector("input.ingredient-input");
+      if (input) input.focus();
+    });
+
+    // törlés delegálva
+    wrapEl.addEventListener("click", (e) => {
+      const removeBtn = e.target.closest(".ingredient-remove-btn");
+      if (!removeBtn) return;
+      const row = removeBtn.closest(".input-group");
+      if (row) row.remove();
+    });
+  }
+
+  // Bekötjük a két editor instance-t
+  wireIngredientsEditor({
+    wrapEl: newIngredientsWrap,
+    addBtnEl: newIngredientsAddBtn,
+  });
+  wireIngredientsEditor({
+    wrapEl: editIngredientsWrap,
+    addBtnEl: editIngredientsAddBtn,
+  });
 
   // Toast helper
   function showToast(message, type = "success") {
@@ -167,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!dropZone || !fileInput) {
       return {
         getSelectedFile: () => null,
-        clearSelectedFile: () => {},
+        clearSelectedFile: () => { },
       };
     }
 
@@ -294,7 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadAdminLogs(),
       ]);
     } catch (err) {
-      console.error("Hiba az /api/me ellenőrzésnél:", err);
+      console.error("Hiba az /api/me/admin ellenőrzésnél:", err);
       showError("Nem sikerült csatlakozni a szerverhez.");
     }
   }
@@ -333,44 +414,42 @@ document.addEventListener("DOMContentLoaded", () => {
         wrapper.innerHTML = `
         <div>
           <strong>${p.name}</strong>
-          <div class="text-muted small">${p.description || ""}</div>
+          <div class="text-muted small clamp-2">${p.description || ""}</div>
           <div class="small fw-semibold">${formatFt(p.price)} Ft</div>
-          ${
-            !isActive
-              ? '<div class="badge bg-secondary mt-1">Inaktív</div>'
-              : ""
+          ${!isActive
+            ? '<div class="badge bg-secondary mt-1">Inaktív</div>'
+            : ""
           }
-          ${
-            isSpecialOffer
-              ? '<div class="badge bg-warning text-dark mt-1">Hétvégi ajánlat</div>'
-              : ""
+          ${isSpecialOffer
+            ? '<div class="badge bg-warning text-dark mt-1">Hétvégi ajánlat</div>'
+            : ""
           }
         </div>
-        <div class="text-end">
+        <div class="text-end d-flex justify-content-end gap-1 flex-shrink-0 align-self-start">
           <button 
             class="btn btn-sm btn-outline-secondary me-1 admin-edit-product-btn"
             data-product-id="${p.id}"
             data-name="${p.name ? String(p.name).replace(/"/g, "&quot;") : ""}"
-            data-description="${
-              p.description ? String(p.description).replace(/"/g, "&quot;") : ""
-            }"
+            data-description="${p.description ? String(p.description).replace(/"/g, "&quot;") : ""
+          }"
+              data-ingredients="${p.ingredients
+            ? String(JSON.stringify(p.ingredients)).replace(/"/g, "&quot;")
+            : "[]"
+          }"
             data-price="${p.price}"
-            data-image-url="${
-              p.image_url ? String(p.image_url).replace(/"/g, "&quot;") : ""
-            }"
+            data-image-url="${p.image_url ? String(p.image_url).replace(/"/g, "&quot;") : ""
+          }"
             data-category="${p.category || "burger"}"
-            data-is-special-offer="${
-              Number(p.is_special_offer) === 1 ? "1" : "0"
-            }"
+            data-is-special-offer="${Number(p.is_special_offer) === 1 ? "1" : "0"
+          }"
 
             title="Szerkesztés"
           >
             <i class="bi bi-pencil"></i>
           </button>
 
-          ${
-            isActive
-              ? `
+          ${isActive
+            ? `
             <button 
               class="btn btn-sm btn-outline-danger admin-delete-product-btn"
               data-product-id="${p.id}"
@@ -378,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
             >
               <i class="bi bi-trash"></i>
             </button>`
-              : `
+            : `
             <button 
               class="btn btn-sm btn-outline-success admin-activate-product-btn"
               data-product-id="${p.id}"
@@ -408,6 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const name = formData.get("name");
       const description = formData.get("description");
       const price = formData.get("price");
+      const ingredients = collectIngredientsFromWrap(newIngredientsWrap);
       let image_url = formData.get("image_url");
       const category = formData.get("category") || "burger";
       const is_special_offer = formData.get("is_special_offer") === "on";
@@ -446,6 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             name,
             description,
+            ingredients,
             price: Number(price),
             image_url,
             category,
@@ -458,6 +539,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.success) {
           showToast("Termék sikeresen hozzáadva.", "success");
           newProductForm.reset();
+          setIngredientsToWrap(newIngredientsWrap, []);
           await loadProducts();
           if (newImageUpload && newImageUpload.clearSelectedFile) {
             newImageUpload.clearSelectedFile();
@@ -552,6 +634,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const productId = editBtn.dataset.productId;
         const name = editBtn.dataset.name || "";
         const description = editBtn.dataset.description || "";
+        let ingredients = [];
+        try {
+          ingredients = editBtn.dataset.ingredients
+            ? JSON.parse(editBtn.dataset.ingredients)
+            : [];
+        } catch (err) {
+          ingredients = [];
+        }
+        setIngredientsToWrap(editIngredientsWrap, Array.isArray(ingredients) ? ingredients : []);
         const price = editBtn.dataset.price || "";
         const imageUrl = editBtn.dataset.imageUrl || "";
         const category = editBtn.dataset.category || "burger";
@@ -584,6 +675,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const name = editProductNameInput.value.trim();
       const description = editProductDescriptionInput.value.trim();
       const price = editProductPriceInput.value;
+      const ingredients = collectIngredientsFromWrap(editIngredientsWrap);
       let image_url = editProductImageUrlInput.value.trim();
       const category = editProductCategorySelect
         ? editProductCategorySelect.value
@@ -627,6 +719,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             name,
             description,
+            ingredients,
             price: Number(price),
             image_url,
             category,
@@ -750,15 +843,12 @@ document.addEventListener("DOMContentLoaded", () => {
                   data-order-id="${o.id}"
                   data-original-status="${o.status}"
                 >
-                  <option value="pending"   ${
-                    o.status === "pending" ? "selected" : ""
-                  }>Folyamatban</option>
-                  <option value="completed" ${
-                    o.status === "completed" ? "selected" : ""
-                  }>Teljesítve</option>
-                  <option value="cancelled" ${
-                    o.status === "cancelled" ? "selected" : ""
-                  }>Törölve</option>
+                  <option value="pending"   ${o.status === "pending" ? "selected" : ""
+              }>Folyamatban</option>
+                  <option value="completed" ${o.status === "completed" ? "selected" : ""
+              }>Teljesítve</option>
+                  <option value="cancelled" ${o.status === "cancelled" ? "selected" : ""
+              }>Törölve</option>
                 </select>
 
                 <div class="d-flex justify-content-between align-items-center mt-1">
@@ -915,33 +1005,28 @@ document.addEventListener("DOMContentLoaded", () => {
             wrapper.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <div><strong>${dateLabel}${
-              timeRange ? " • " + timeRange : ""
-            }</strong></div>
-                <div>Asztal: <strong>${r.table_number}.</strong> • ${
-              r.people_count
-            } fő</div>
+                <div><strong>${dateLabel}${timeRange ? " • " + timeRange : ""
+              }</strong></div>
+                <div>Asztal: <strong>${r.table_number}.</strong> • ${r.people_count
+              } fő</div>
                 <div>${r.name} – ${r.phone}</div>
-                ${
-                  r.note
-                    ? `<div class="text-muted small mt-1">Megjegyzés: ${r.note}</div>`
-                    : ""
-                }
+                ${r.note
+                ? `<div class="text-muted small mt-1">Megjegyzés: ${r.note}</div>`
+                : ""
+              }
               </div>
               <div class="text-end">
                 <div class="mb-1">
-                  ${
-                    r.status === "pending"
-                      ? '<span class="badge bg-warning text-dark">Függőben</span>'
-                      : r.status === "confirmed"
-                      ? '<span class="badge bg-success">Megerősítve</span>'
-                      : '<span class="badge bg-secondary">Lemondva</span>'
-                  }
+                  ${r.status === "pending"
+                ? '<span class="badge bg-warning text-dark">Függőben</span>'
+                : r.status === "confirmed"
+                  ? '<span class="badge bg-success">Megerősítve</span>'
+                  : '<span class="badge bg-secondary">Lemondva</span>'
+              }
                 </div>
                 <div>
-                  ${
-                    r.status === "pending"
-                      ? `
+                  ${r.status === "pending"
+                ? `
                     <button 
                       class="btn btn-sm btn-outline-success me-1 admin-reservation-confirm-btn"
                       data-reservation-id="${r.id}"
@@ -955,8 +1040,8 @@ document.addEventListener("DOMContentLoaded", () => {
                       Lemondás
                     </button>
                   `
-                      : ""
-                  }
+                : ""
+              }
                 </div>
               </div>
             </div>
@@ -1079,9 +1164,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const entityLabel =
           entityTranslations[log.entity_type] || log.entity_type || "-";
-        const entityDisplay = `${entityLabel}${
-          log.entity_id ? " #" + log.entity_id : ""
-        }`;
+        const entityDisplay = `${entityLabel}${log.entity_id ? " #" + log.entity_id : ""
+          }`;
 
         wrapper.innerHTML = `
           <div class="d-flex justify-content-between">
@@ -1094,43 +1178,41 @@ document.addEventListener("DOMContentLoaded", () => {
               Entitás: ${entityDisplay}
             </div>
             ${Object.entries(detailsData)
-              .map(([key, val]) => {
-                const label = detailLabels[key] || key;
+            .map(([key, val]) => {
+              const label = detailLabels[key] || key;
 
-                // Státusz magyarítása
-                const translatedVal =
-                  typeof val === "string" && statusTranslations[val]
-                    ? statusTranslations[val]
-                    : val;
+              // Státusz magyarítása
+              const translatedVal =
+                typeof val === "string" && statusTranslations[val]
+                  ? statusTranslations[val]
+                  : val;
 
-                // Státusz ikon
-                const icon =
-                  typeof val === "string" && statusIcons[val]
-                    ? statusIcons[val] + " "
-                    : "";
+              // Státusz ikon
+              const icon =
+                typeof val === "string" && statusIcons[val]
+                  ? statusIcons[val] + " "
+                  : "";
 
-                // Ár formázása
-                if (key === "price") {
-                  return `<li><strong>${label}:</strong> ${translatedVal} Ft</li>`;
-                }
+              // Ár formázása
+              if (key === "price") {
+                return `<li><strong>${label}:</strong> ${translatedVal} Ft</li>`;
+              }
 
-                // Boolean (1/0) formázás
-                if (val === 1 || val === 0) {
-                  return `<li><strong>${label}:</strong> ${
-                    val === 1 ? "igen" : "nem"
+              // Boolean (1/0) formázás
+              if (val === 1 || val === 0) {
+                return `<li><strong>${label}:</strong> ${val === 1 ? "igen" : "nem"
                   }</li>`;
-                }
+              }
 
-                // Boolean (true/false) formázás
-                if (val === true || val === false) {
-                  return `<li><strong>${label}:</strong> ${
-                    val ? "igen" : "nem"
+              // Boolean (true/false) formázás
+              if (val === true || val === false) {
+                return `<li><strong>${label}:</strong> ${val ? "igen" : "nem"
                   }</li>`;
-                }
+              }
 
-                return `<li><strong>${label}:</strong> ${icon}${translatedVal}</li>`;
-              })
-              .join("")}
+              return `<li><strong>${label}:</strong> ${icon}${translatedVal}</li>`;
+            })
+            .join("")}
             </div>
             <div class="text-end small text-muted">
               ${dateLabel}
@@ -1348,9 +1430,8 @@ document.addEventListener("DOMContentLoaded", () => {
           <div><strong>Rendelés azonosító:</strong> #${order.id}</div>
           <div><strong>Dátum:</strong> ${formattedDate}</div>
           <div><strong>Státusz:</strong> ${statusText}</div>
-          <div><strong>Vevő:</strong> ${order.user.name || ""} &lt;${
-          order.user.email
-        }&gt;</div>
+          <div><strong>Vevő:</strong> ${order.user.name || ""} &lt;${order.user.email
+          }&gt;</div>
         </div>
       `;
 

@@ -6,11 +6,15 @@ import {
   sendOrderCancelledEmail,
 } from "./email.service.js";
 import { logAdminAction } from "./audit.service.js";
+import {
+  parseIngredients,
+  toIngredientsJson,
+} from "../config/parseIngredients.js";
 
 // Termékek
 export function getProducts(req, res) {
   const sql = `
-    SELECT id, name, description, price, is_active, is_special_offer, category, image_url
+    SELECT id, name, description, ingredients, price, is_active, is_special_offer, category, image_url
     FROM products
     ORDER BY category, name
   `;
@@ -24,6 +28,10 @@ export function getProducts(req, res) {
       });
     }
 
+    rows.forEach((p) => {
+      p.ingredients = parseIngredients(p.ingredients);
+    });
+
     res.json({
       success: true,
       products: rows,
@@ -35,6 +43,7 @@ export function createProduct(req, res) {
   const {
     name,
     description,
+    ingredients,
     price,
     image_url,
     is_active,
@@ -69,16 +78,17 @@ export function createProduct(req, res) {
   const specialOfferFlag = is_special_offer ? 1 : 0;
 
   const sql = `
-    INSERT INTO products 
-      (name, description, price, image_url, is_active, is_special_offer, category)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+  INSERT INTO products 
+    (name, description, ingredients, price, image_url, is_active, is_special_offer, category)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
   db.query(
     sql,
     [
       name,
       description || null,
+      toIngredientsJson(ingredients),
       price,
       image_url || "",
       activeFlag,
@@ -121,6 +131,7 @@ export function updateProduct(req, res) {
   const {
     name,
     description,
+    ingredients,
     price,
     image_url,
     category,
@@ -159,6 +170,7 @@ export function updateProduct(req, res) {
     SET 
       name = ?, 
       description = ?, 
+      ingredients = ?,
       price = ?, 
       image_url = ?, 
       is_active = ?, 
@@ -172,6 +184,7 @@ export function updateProduct(req, res) {
     [
       name,
       description || null,
+      toIngredientsJson(ingredients),
       price,
       image_url || "",
       activeFlag,

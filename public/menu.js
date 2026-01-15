@@ -1,127 +1,151 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const burgerList = document.getElementById("burgerList");
-    const sideList = document.getElementById("sideList");
-    const drinkList = document.getElementById("drinkList");
-    const sauceList = document.getElementById("sauceList");
+  const burgerList = document.getElementById("burgerList");
+  const sideList = document.getElementById("sideList");
+  const drinkList = document.getElementById("drinkList");
+  const sauceList = document.getElementById("sauceList");
 
-    function formatFt(value) {
-        return Math.round(Number(value)).toLocaleString("hu-HU");
+  function formatFt(value) {
+    return Math.round(Number(value)).toLocaleString("hu-HU");
+  }
+
+  function createProductCard(product) {
+    const col = document.createElement("div");
+    col.className = "col-md-6 col-lg-4";
+
+    const fallbackImg = "images/farmburger.png";
+    let imgSrc = product.image_url || product.imageUrl || product.image || "";
+
+    if (imgSrc && !imgSrc.startsWith("http") && !imgSrc.startsWith("/")) {
+      imgSrc = "/" + imgSrc.replace(/^\/+/, "");
     }
+    if (!imgSrc) imgSrc = fallbackImg;
 
-    function createProductCard(product) {
-        const col = document.createElement("div");
-        col.className = "col-md-6 col-lg-4";
+    col.innerHTML = `
+      <div
+        class="menu-image-card"
+        role="button"
+        tabindex="0"
+        data-product-id="${product.id}"
+      >
+        <img src="${imgSrc}" alt="${product.name}">
 
-        // Kép kezelése: adminból jöhet abszolút (/uploads/...) vagy relatív (uploads/...)
-        const fallbackImg = "images/farmburger.png";
-        let imgSrc = product.image_url || product.imageUrl || product.image || "";
+        <div class="menu-image-overlay">
+          <h5 class="product-title">${product.name}</h5>
 
-        if (imgSrc && !imgSrc.startsWith("http") && !imgSrc.startsWith("/")) {
-            imgSrc = "/" + imgSrc.replace(/^\/+/, "");
-        }
-        if (!imgSrc) imgSrc = fallbackImg;
+          <p class="product-desc">
+            ${product.description || " "}
+          </p>
 
-        col.innerHTML = `
-        <div class="menu-image-card">
-            <img src="${imgSrc}" alt="${product.name}">
+          <div class="overlay-bottom">
+            <div class="product-price">${formatFt(product.price)} Ft</div>
 
-            <div class="menu-image-overlay">
-            <h5 class="product-title">${product.name}</h5>
-            <p class="product-desc">
-                ${product.description || " "}
-            </p>
-
-            <div class="overlay-bottom">
-                <div class="product-price">${product.price} Ft</div>
-                <button 
-                class="btn btn-sm btn-light order-btn"
-                data-product-id="${product.id}">
-                Rendelés
-                </button>
-            </div>
-            </div>
+            <button
+              class="btn btn-sm btn-light order-btn"
+              data-product-id="${product.id}"
+            >
+              Kosárba
+            </button>
+          </div>
         </div>
-        `;
-        return col;
-    }
+      </div>
+    `;
 
-    async function loadMenu() {
-        try {
-            const res = await apiFetch("/api/menu");
-            const data = await res.json();
+    return col;
+  }
 
-            if (!data.success) {
-                const msg = data.message || "Nem sikerült betölteni a menüt.";
-                burgerList.textContent = msg;
-                sideList.textContent = msg;
-                drinkList.textContent = msg;
-                sauceList.textContent = msg;
-                return;
-            }
+  async function loadMenu() {
+    try {
+      const res = await apiFetch("/api/menu");
+      const data = await res.json();
 
-            const products = data.products || [];
+      if (!data.success) {
+        const msg = data.message || "Nem sikerült betölteni a menüt.";
+        burgerList.textContent = msg;
+        sideList.textContent = msg;
+        drinkList.textContent = msg;
+        sauceList.textContent = msg;
+        return;
+      }
 
-            // töröljük a "Betöltés..." szöveget
-            burgerList.innerHTML = "";
-            sideList.innerHTML = "";
-            drinkList.innerHTML = "";
-            sauceList.innerHTML = "";
+      const products = data.products || [];
 
-            const grouped = {
-                burger: [],
-                side: [],
-                drink: [],
-                sauce: [],
-            };
+      // 👉 termékek map átadása a product modalnak
+      const productMap = new Map(products.map((p) => [String(p.id), p]));
+      if (typeof window.setProductModalMap === "function") {
+        window.setProductModalMap(productMap);
+      }
 
-            products.forEach((p) => {
-                const cat = p.category || "burger";
-                if (grouped[cat]) {
-                    grouped[cat].push(p);
-                } else {
-                    grouped.burger.push(p);
-                }
-            });
+      burgerList.innerHTML = "";
+      sideList.innerHTML = "";
+      drinkList.innerHTML = "";
+      sauceList.innerHTML = "";
 
-            function renderCategory(listEl, items, emptyText) {
-                if (!listEl) return;
-                if (!items || items.length === 0) {
-                    listEl.textContent = emptyText;
-                    return;
-                }
-                items.forEach((p) => {
-                    listEl.appendChild(createProductCard(p));
-                });
-            }
+      const grouped = {
+        burger: [],
+        side: [],
+        drink: [],
+        sauce: [],
+      };
 
-            renderCategory(
-                burgerList,
-                grouped.burger,
-                "Jelenleg nincsenek burgerek a menüben."
-            );
-            renderCategory(
-                sideList,
-                grouped.side,
-                "Jelenleg nincsenek köretek a menüben."
-            );
-            renderCategory(
-                drinkList,
-                grouped.drink,
-                "Jelenleg nincsenek innivalók a menüben."
-            );
-            renderCategory(
-                sauceList,
-                grouped.sauce,
-                "Jelenleg nincsenek szószok a menüben."
-            );
-        } catch (err) {
-            console.error("Hiba a /api/menu hívásnál:", err);
-            burgerList.textContent = "Nem sikerült csatlakozni a szerverhez.";
-            sideList.textContent = "Nem sikerült csatlakozni a szerverhez.";
-            drinkList.textContent = "Nem sikerült csatlakozni a szerverhez.";
-            sauceList.textContent = "Nem sikerült csatlakozni a szerverhez.";
+      products.forEach((p) => {
+        const cat = p.category || "burger";
+        if (grouped[cat]) grouped[cat].push(p);
+        else grouped.burger.push(p);
+      });
+
+      function renderCategory(listEl, items, emptyText) {
+        if (!listEl) return;
+        if (!items || items.length === 0) {
+          listEl.textContent = emptyText;
+          return;
         }
-    }
+        items.forEach((p) => listEl.appendChild(createProductCard(p)));
+      }
 
-    loadMenu();
+      renderCategory(
+        burgerList,
+        grouped.burger,
+        "Jelenleg nincsenek burgerek a menüben."
+      );
+      renderCategory(
+        sideList,
+        grouped.side,
+        "Jelenleg nincsenek köretek a menüben."
+      );
+      renderCategory(
+        drinkList,
+        grouped.drink,
+        "Jelenleg nincsenek innivalók a menüben."
+      );
+      renderCategory(
+        sauceList,
+        grouped.sauce,
+        "Jelenleg nincsenek szószok a menüben."
+      );
+    } catch (err) {
+      console.error("Hiba a /api/menu hívásnál:", err);
+      const msg = "Nem sikerült csatlakozni a szerverhez.";
+      burgerList.textContent = msg;
+      sideList.textContent = msg;
+      drinkList.textContent = msg;
+      sauceList.textContent = msg;
+    }
+  }
+  
+  document.addEventListener("click", (e) => {
+    // ha a Kosárba gombra kattintottak, ne nyisson modalt
+    if (e.target.closest(".order-btn")) return;
+
+    const card = e.target.closest(".menu-image-card");
+    if (!card) return;
+
+    const pid = card.dataset.productId;
+    if (!pid) return;
+
+    if (typeof window.openProductModalById === "function") {
+      window.openProductModalById(pid);
+    }
+  });
+
+  loadMenu();
 });
