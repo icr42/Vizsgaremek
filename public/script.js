@@ -35,6 +35,24 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  // Home navbar: scrollra váltson "navbar2" kinézetre
+  const homeNav = document.querySelector("nav.navbar-glass");
+  if (homeNav) {
+    const thresholdOn = 24; // lefele: itt vált "scrolled" (tehát floating OFF)
+    const thresholdOff = 6; // felfele: itt vált vissza floating ON
+
+    let isFloating = true;
+
+    const apply = () => {
+      if (isFloating && window.scrollY > thresholdOn) isFloating = false;
+      if (!isFloating && window.scrollY < thresholdOff) isFloating = true;
+      homeNav.classList.toggle("navbar-floating", isFloating);
+    };
+
+    window.addEventListener("scroll", apply, { passive: true });
+    apply();
+  }
+
   buttons.forEach((btn) => {
     btn.addEventListener("click", async () => {
       const productId = btn.dataset.productId;
@@ -420,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
     userToastInstance.show();
   }
 
-  window.showUserConfirm = function(message) {
+  window.showUserConfirm = function (message) {
     return new Promise((resolve) => {
       if (
         !userConfirmModal ||
@@ -458,7 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       userConfirmModal.show();
     });
-  }
+  };
 
   function toDateInputValue(value) {
     if (!value) return "";

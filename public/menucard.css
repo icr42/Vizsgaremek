@@ -269,6 +269,11 @@
   white-space: nowrap;
 }
 
+.product-modal-cart:hover {
+  background-color: #ffc107;
+  border-color: #ffc107;
+}
+
 @media (max-width: 576px) {
   .product-modal-hero {
     height: 230px;
