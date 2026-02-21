@@ -1,0 +1,61 @@
+TESZTJEGYZŐKÖNYV (FogPifkáló – Backend + Flutter app)
+Formátum: Teszt | Eredmény | (ha hibás: Javítás)
+
+01) POST /api/login (helyes email+jelszó) | Eredmény: OK
+02) POST /api/login (hibás jelszó) | Eredmény: OK (401/hibaüzenet)
+03) GET /api/me (login után) | Eredmény: OK (loggedIn=true, user objektum)
+04) GET /api/me (login nélkül) | Eredmény: OK (loggedIn=false / 401)
+
+05) POST /api/refresh (lejárt access token után) | Eredmény: OK
+06) Flutter: 401 → refresh → retry automatikus (Dio interceptor) | Eredmény: OK
+07) Flutter: refresh sikertelen → kijelentkeztetés/login képernyő | Eredmény: OK
+
+08) Flutter: app újranyitás után session megmarad (PersistCookieJar) | Eredmény: OK
+09) Flutter: Startup auto-login (/me) belépés nélkül | Eredmény: NEM OK (Welcome “villogott”)
+    Javítás: /me hívás extra flaggel (__suppressSessionExpired) + StartupScreen Future cache initState-ben
+
+10) GET /api/delivery/orders (futár) | Eredmény: OK (200, orders lista)
+11) GET /api/delivery/orders (nem futár user) | Eredmény: OK (401/403 tiltás)
+12) GET /api/delivery/orders/:id (futár) | Eredmény: OK (200, order részletek + items)
+13) GET /api/delivery/orders/:id (rossz id pl. “abc”) | Eredmény: OK (400 érvénytelen azonosító)
+14) PUT /api/delivery/orders/:id/complete (futár) | Eredmény: OK (200, státusz completed)
+15) PUT /api/delivery/orders/:id/complete (már completed) | Eredmény: OK (400/üzleti szabály)
+
+16) GET /api/delivery/orders/completed (history) | Eredmény: NEM OK (400 “Érvénytelen rendelésazonosító”)
+    Javítás: route sorrend: /orders/completed kerüljön /orders/:id elé VAGY /orders/:id(\\d+) regex
+17) PUT /api/delivery/orders/:id/undo (completed → pending) | Eredmény: OK (200)
+18) PUT /api/delivery/orders/:id/undo (nem completed) | Eredmény: OK (400/üzleti szabály)
+
+19) Socket.IO: pendingOrdersUpdated event érkezik | Eredmény: OK
+20) Flutter OrdersScreen: pendingOrdersUpdated-re lista frissül | Eredmény: OK
+
+21) Admin login (admin-only user) | Eredmény: NEM OK (mobil tiltott)
+    Javítás: AuthRepository.login feltétel: engedélyezni isAdmin=true esetén is (ne csak isDelivery)
+22) GET /api/admin/orders (admin) | Eredmény: OK (200, orders)
+23) GET /api/admin/orders (nem admin) | Eredmény: OK (401/403 tiltás)
+24) GET /api/admin/orders/:id (admin) | Eredmény: OK (200, order detail)
+25) PUT /api/admin/orders/:id/status (valid status) | Eredmény: OK (200)
+26) PUT /api/admin/orders/:id/status (invalid status) | Eredmény: OK (400/hibaüzenet)
+
+27) GET /api/admin/reservations (admin) | Eredmény: OK (200, reservations)
+28) GET /api/admin/reservations (nem admin) | Eredmény: OK (401/403 tiltás)
+29) PUT /api/admin/reservations/:id/status (valid) | Eredmény: OK (200)
+30) PUT /api/admin/reservations/:id/status (invalid) | Eredmény: OK (400/hibaüzenet)
+
+31) Flutter: futár+admin user → mindkét nézet elérhető tabokon | Eredmény: OK
+32) Flutter: admin tab csak admin usernek látszik | Eredmény: OK
+33) Flutter: admin order kártyáról “Részletek” megnyitás | Eredmény: OK
+
+34) Flutter: OrdersScreen socketUrl paraméter átadása (Welcome→Login→Home) | Eredmény: NEM OK (fordítási hibák)
+    Javítás: socketUrl végig paraméterként átadva minden screen konstruktoron
+
+35) Flutter: baseUrl 10.0.2.2 Android emun jó, fizikai eszközön nem | Eredmény: NEM OK (fizikai eszközön elérés)
+    Javítás: --dart-define alapú config (API_BASE_URL/SOCKET_URL), fizikai eszközön LAN IP használata
+
+36) Flutter: assets/logo hiány esetén crash | Eredmény: NEM OK (asset hiány)
+    Javítás: assets mappa csomagolása + pubspec.yaml assets bejegyzés egyeztetés
+
+37) Admin rendelés részletekben szállítási cím megjelenítés | Eredmény: OK (shipping_address mezőből)
+38) Foglalás létrejön weben → admin mobil listában megjelenik frissítés után | Eredmény: OK
+39) Új rendelés létrejön weben → futár mobil listában socket eventre megjelenik | Eredmény: OK
+40) Refresh token törlése (DB) → mobil következő kérésnél kijelentkeztetés | Eredmény: OK
